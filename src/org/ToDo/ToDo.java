@@ -1,6 +1,6 @@
 package org.ToDo;
 
-/*import java.sql.Blob;
+import java.sql.Blob;
 import java.util.Date;
 
 public class ToDo{
@@ -12,7 +12,29 @@ public class ToDo{
     public Blob immagine;
     public Boolean stato;
 
+    public ToDo(String titolo, String descrizione){
+        this.titolo = titolo;
+        this.descrizione = descrizione;
+    }
 
+    public String getTitolo(){
+        return titolo;
+    }
 
+    public String getDescrizione() {
+        return descrizione;
+    }
+
+    public void setTitolo(String titolo) {
+        this.titolo = titolo;
+    }
+
+    public void setDescrizione(String descrizione) {
+        this.descrizione = descrizione;
+    }
+
+    @Override
+    public String toString() {
+        return "ToDo: "+ titolo + " - "+ descrizione;
+    }
 }
-*/

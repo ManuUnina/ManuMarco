@@ -1,8 +1,6 @@
 package org.ToDo;
-/*
 public enum Titolo {
         LAVORO,
-        TEMPOL,
+        TEMPO_LIBERO,
         UNIVERSITA
 }
-*/
