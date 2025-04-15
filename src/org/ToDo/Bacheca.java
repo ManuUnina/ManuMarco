@@ -2,8 +2,8 @@ package org.ToDo;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.ToDo.Main.bacheche;
-import static org.ToDo.Main.sc;
+/*import static org.ToDo.Main.bacheche;
+import static org.ToDo.Main.sc;*/
 /*
 public class Bacheca {
     public Titolo titolo;
@@ -83,13 +83,13 @@ public class Bacheca {
     }
 
     public static void inizializzaBacheche() {
-        bacheche.put(Titolo.UNIVERSITA, new Bacheca(Titolo.UNIVERSITA, "Compiti e lezioni"));
-        bacheche.put(Titolo.LAVORO, new Bacheca(Titolo.LAVORO, "Progetti lavorativi"));
-        bacheche.put(Titolo.TEMPO_LIBERO, new Bacheca(Titolo.TEMPO_LIBERO, "Hobby e relax"));
+        Main.bacheche.put(Titolo.UNIVERSITA, new Bacheca(Titolo.UNIVERSITA, "Compiti e lezioni"));
+        Main.bacheche.put(Titolo.LAVORO, new Bacheca(Titolo.LAVORO, "Progetti lavorativi"));
+        Main.bacheche.put(Titolo.TEMPO_LIBERO, new Bacheca(Titolo.TEMPO_LIBERO, "Hobby e relax"));
     }
 
     static void visualizzaBacheche() {
-        bacheche.values().forEach(System.out::println);
+        Main.bacheche.values().forEach(System.out::println);
     }
 
     public static Titolo scegliBacheca() {
@@ -98,10 +98,10 @@ public class Bacheca {
             System.out.println("- " + titolo);
         }
         System.out.print("Titolo: ");
-        return Titolo.valueOf(sc.nextLine().toUpperCase());
+        return Titolo.valueOf(Main.sc.nextLine().toUpperCase());
     }
 
     public static void visualizzaBacheca(Titolo titolo) {
-        System.out.println(bacheche.get(titolo));
+        System.out.println(Main.bacheche.get(titolo));
     }
 }

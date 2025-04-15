@@ -3,9 +3,9 @@ import java.util.EnumMap;
 import java.util.Map;
 import java.util.Scanner;
 
-import static org.ToDo.Bacheca.inizializzaBacheche;
+/*import static org.ToDo.Bacheca.inizializzaBacheche;
 import static org.ToDo.Bacheca.visualizzaBacheche;
-import static org.ToDo.ToDo.*;
+import static org.ToDo.ToDo.*;*/
 //TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
 // click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
 /*public class Main {
@@ -93,7 +93,7 @@ public class Main {
             accessoConsentito = true;
         }
         if(accessoConsentito) {
-            inizializzaBacheche();
+            Bacheca.inizializzaBacheche();
             boolean esci = false;
 
             while(!esci) {
@@ -109,12 +109,12 @@ public class Main {
                 int scelta = Integer.parseInt(sc.nextLine());
 
                 switch(scelta) {
-                    case 1 -> visualizzaBacheche();
-                    case 2 -> aggiungiToDo();
-                    case 3 -> modificaToDo();
-                    case 4 -> eliminaToDo();
-                    case 5 -> spostaToDo();
-                    case 6 -> cambiaOrdineToDo();
+                    case 1 -> Bacheca.visualizzaBacheche();
+                    case 2 -> ToDo.aggiungiToDo();
+                    case 3 -> ToDo.modificaToDo();
+                    case 4 -> ToDo.eliminaToDo();
+                    case 5 -> ToDo.spostaToDo();
+                    case 6 -> ToDo.cambiaOrdineToDo();
                     case 7 -> esci = true;
                     default -> System.out.println("Errore\n");
                 }

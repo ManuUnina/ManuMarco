@@ -3,10 +3,10 @@ package org.ToDo;
 import java.sql.Blob;
 import java.util.Date;
 
-import static org.ToDo.Bacheca.scegliBacheca;
+/*import static org.ToDo.Bacheca.scegliBacheca;
 import static org.ToDo.Bacheca.visualizzaBacheca;
 import static org.ToDo.Main.bacheche;
-import static org.ToDo.Main.sc;
+import static org.ToDo.Main.sc;*/
 
 public class ToDo{
     public String titolo;
@@ -44,56 +44,56 @@ public class ToDo{
     }
 
     static void aggiungiToDo() {
-        Titolo titolo = scegliBacheca();
+        Titolo titolo = Bacheca.scegliBacheca();
         System.out.print("Titolo ToDo: ");
-        String titoloToDo = sc.nextLine();
+        String titoloToDo = Main.sc.nextLine();
         System.out.print("Descrizione ToDo: ");
-        String descrizione = sc.nextLine();
-        bacheche.get(titolo).aggiungiToDo(new ToDo(titoloToDo, descrizione));
+        String descrizione = Main.sc.nextLine();
+        Main.bacheche.get(titolo).aggiungiToDo(new ToDo(titoloToDo, descrizione));
     }
 
     static void modificaToDo() {
-        Titolo titolo = scegliBacheca();
-        Bacheca b = bacheche.get(titolo);
-        visualizzaBacheca(titolo);
+        Titolo titolo = Bacheca.scegliBacheca();
+        Bacheca b = Main.bacheche.get(titolo);
+        Bacheca.visualizzaBacheca(titolo);
         System.out.print("Indice ToDo da modificare: ");
-        int indice = Integer.parseInt(sc.nextLine());
+        int indice = Integer.parseInt(Main.sc.nextLine());
         System.out.print("Nuovo titolo: ");
-        String nuovoTitolo = sc.nextLine();
+        String nuovoTitolo = Main.sc.nextLine();
         System.out.print("Nuova descrizione: ");
-        String nuovaDescrizione = sc.nextLine();
+        String nuovaDescrizione = Main.sc.nextLine();
         b.getToDos().get(indice).setTitolo(nuovoTitolo);
         b.getToDos().get(indice).setDescrizione(nuovaDescrizione);
     }
 
     static void eliminaToDo() {
-        Titolo titolo = scegliBacheca();
-        visualizzaBacheca(titolo);
+        Titolo titolo = Bacheca.scegliBacheca();
+        Bacheca.visualizzaBacheca(titolo);
         System.out.print("Indice ToDo da eliminare: ");
-        int indice = Integer.parseInt(sc.nextLine());
-        bacheche.get(titolo).rimuoviToDo(indice);
+        int indice = Integer.parseInt(Main.sc.nextLine());
+        Main.bacheche.get(titolo).rimuoviToDo(indice);
     }
 
     static void spostaToDo() {
         System.out.println("-- Bacheca di origine --");
-        Titolo origine = scegliBacheca();
-        visualizzaBacheca(origine);
+        Titolo origine = Bacheca.scegliBacheca();
+        Bacheca.visualizzaBacheca(origine);
         System.out.print("Indice ToDo da spostare: ");
-        int indice = Integer.parseInt(sc.nextLine());
-        ToDo daSpostare = bacheche.get(origine).getToDos().remove(indice);
+        int indice = Integer.parseInt(Main.sc.nextLine());
+        ToDo daSpostare = Main.bacheche.get(origine).getToDos().remove(indice);
 
         System.out.println("-- Bacheca di destinazione --");
-        Titolo destinazione = scegliBacheca();
-        bacheche.get(destinazione).aggiungiToDo(daSpostare);
+        Titolo destinazione = Bacheca.scegliBacheca();
+        Main.bacheche.get(destinazione).aggiungiToDo(daSpostare);
     }
 
     static void cambiaOrdineToDo() {
-        Titolo titolo = scegliBacheca();
-        visualizzaBacheca(titolo);
+        Titolo titolo = Bacheca.scegliBacheca();
+        Bacheca.visualizzaBacheca(titolo);
         System.out.print("Indice ToDo da spostare: ");
-        int indice = Integer.parseInt(sc.nextLine());
+        int indice = Integer.parseInt(Main.sc.nextLine());
         System.out.print("Nuova posizione: ");
-        int nuovaPosizione = Integer.parseInt(sc.nextLine());
-        bacheche.get(titolo).spostaToDo(indice, nuovaPosizione);
+        int nuovaPosizione = Integer.parseInt(Main.sc.nextLine());
+        Main.bacheche.get(titolo).spostaToDo(indice, nuovaPosizione);
     }
 }
