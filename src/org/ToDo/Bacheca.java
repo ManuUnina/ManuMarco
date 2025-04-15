@@ -1,6 +1,9 @@
 package org.ToDo;
 import java.util.ArrayList;
 import java.util.List;
+
+import static org.ToDo.Main.bacheche;
+import static org.ToDo.Main.sc;
 /*
 public class Bacheca {
     public Titolo titolo;
@@ -22,8 +25,8 @@ public class Bacheca {
     public String stampa (){
         return "Il titolo è:" + titolo + "\nla descrizione è:" + descrizione;
     }
-}
-*/
+}*/
+
 
 public class Bacheca {
     public Titolo titolo;
@@ -77,5 +80,28 @@ public class Bacheca {
             sb.append(i).append(": ").append(ToDos.get(i)).append("\n");
         }
         return sb.toString();
+    }
+
+    public static void inizializzaBacheche() {
+        bacheche.put(Titolo.UNIVERSITA, new Bacheca(Titolo.UNIVERSITA, "Compiti e lezioni"));
+        bacheche.put(Titolo.LAVORO, new Bacheca(Titolo.LAVORO, "Progetti lavorativi"));
+        bacheche.put(Titolo.TEMPO_LIBERO, new Bacheca(Titolo.TEMPO_LIBERO, "Hobby e relax"));
+    }
+
+    static void visualizzaBacheche() {
+        bacheche.values().forEach(System.out::println);
+    }
+
+    public static Titolo scegliBacheca() {
+        System.out.println("Scegli bacheca:");
+        for (Titolo titolo : Titolo.values()) {
+            System.out.println("- " + titolo);
+        }
+        System.out.print("Titolo: ");
+        return Titolo.valueOf(sc.nextLine().toUpperCase());
+    }
+
+    public static void visualizzaBacheca(Titolo titolo) {
+        System.out.println(bacheche.get(titolo));
     }
 }

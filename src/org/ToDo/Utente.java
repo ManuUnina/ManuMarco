@@ -32,8 +32,8 @@ public class Utente {
 }*/
 
 public class Utente {
-    private String email;
-    private String password;
+    protected String email;
+    protected String password;
 
     public Utente(String email, String password) {
         this.email = email;
