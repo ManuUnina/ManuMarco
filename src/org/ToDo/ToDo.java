@@ -3,11 +3,6 @@ package org.ToDo;
 import java.sql.Blob;
 import java.util.Date;
 
-/*import static org.ToDo.Bacheca.scegliBacheca;
-import static org.ToDo.Bacheca.visualizzaBacheca;
-import static org.ToDo.Main.bacheche;
-import static org.ToDo.Main.sc;*/
-
 public class ToDo{
     public String titolo;
     public Date scadenza;

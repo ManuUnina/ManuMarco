@@ -2,32 +2,6 @@ package org.ToDo;
 import java.util.ArrayList;
 import java.util.List;
 
-/*import static org.ToDo.Main.bacheche;
-import static org.ToDo.Main.sc;*/
-/*
-public class Bacheca {
-    public Titolo titolo;
-    public String descrizione;
-
-    public Bacheca (Titolo titolo, String descrizione) {
-        this.titolo = titolo;
-        this.descrizione = descrizione;
-    }
-
-    public void setTitolo(Titolo titolo) {
-        this.titolo = titolo;
-    }
-
-    public void setDescrizione(String descrizione) {
-        this.descrizione = descrizione;
-    }
-
-    public String stampa (){
-        return "Il titolo è:" + titolo + "\nla descrizione è:" + descrizione;
-    }
-}*/
-
-
 public class Bacheca {
     public Titolo titolo;
     private String descrizione;
