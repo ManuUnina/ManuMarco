@@ -9,6 +9,14 @@ public class Utente {
         this.password = password;
     }
 
+    public String getemail() {
+        return email;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
     public boolean verificaCredenziali(String email, String password) {
         return this.email.equals(email) && this.password.equals(password);
     }

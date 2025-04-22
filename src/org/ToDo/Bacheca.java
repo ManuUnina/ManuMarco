@@ -1,7 +1,6 @@
 package org.ToDo;
 import java.util.ArrayList;
 import java.util.List;
-
 public class Bacheca {
     public Titolo titolo;
     private String descrizione;
@@ -29,18 +28,18 @@ public class Bacheca {
         return ToDos;
     }
 
-    public void aggiungiToDo(ToDo todo){
+    public void aggiungiToDo(ToDo todo) {
         ToDos.add(todo);
     }
 
-    public void rimuoviToDo(int indice){
-        if(indice >=0 && indice<ToDos.size()){
+    public void rimuoviToDo(int indice) {
+        if (indice >= 0 && indice < ToDos.size()) {
             ToDos.remove(indice);
         }
     }
 
-    public void spostaToDo(int indice, int nuovaPosizione){
-        if(indice >= 0 && indice < ToDos.size() && nuovaPosizione >=0 && nuovaPosizione < ToDos.size()){
+    public void spostaToDo(int indice, int nuovaPosizione) {
+        if (indice >= 0 && indice < ToDos.size() && nuovaPosizione >= 0 && nuovaPosizione < ToDos.size()) {
             ToDo todo = ToDos.remove(indice);
             ToDos.add(nuovaPosizione, todo);
         }

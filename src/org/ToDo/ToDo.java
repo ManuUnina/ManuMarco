@@ -11,10 +11,12 @@ public class ToDo{
     public String descrizione;
     public Blob immagine;
     public Boolean stato;
+    public ListaUtenti lista;
 
-    public ToDo(String titolo, String descrizione){
+    public ToDo(String titolo, String descrizione, String autore){
         this.titolo = titolo;
         this.descrizione = descrizione;
+        this.lista= new ListaUtenti(autore);
     }
 
     public String getTitolo(){
@@ -33,9 +35,13 @@ public class ToDo{
         this.descrizione = descrizione;
     }
 
+    public ListaUtenti getLista() {
+        return lista;
+    }
+
     @Override
     public String toString() {
-        return "ToDo: "+ titolo + " - "+ descrizione;
+        return "ToDo: " + titolo + " - " + descrizione + "\n" + lista.toString();
     }
 
     static void aggiungiToDo() {
@@ -44,8 +50,27 @@ public class ToDo{
         String titoloToDo = Main.sc.nextLine();
         System.out.print("Descrizione ToDo: ");
         String descrizione = Main.sc.nextLine();
-        Main.bacheche.get(titolo).aggiungiToDo(new ToDo(titoloToDo, descrizione));
+        String autore = Main.utenteRegistrato.getemail();
+        Main.bacheche.get(titolo).aggiungiToDo(new ToDo(titoloToDo, descrizione, autore));
     }
+
+    public static void aggiungiUtenti() {
+        Titolo titolo = Bacheca.scegliBacheca();
+        Bacheca b = Main.bacheche.get(titolo);
+        Bacheca.visualizzaBacheca(titolo);
+        System.out.print("Indice del ToDo per aggiungere utenti: ");
+        int indice = Integer.parseInt(Main.sc.nextLine());
+        ToDo t = b.getToDos().get(indice);
+        System.out.println("Inserisci le email degli utenti da aggiungere (scrivi 'fine' per terminare):");
+        while (true) {
+            System.out.print("Email: ");
+            String email = Main.sc.nextLine();
+            if (email.equalsIgnoreCase("fine")) break;
+            t.getLista().aggiungiUtente(email);
+            System.out.println("Utente aggiunto.");
+        }
+    }
+
 
     static void modificaToDo() {
         Titolo titolo = Bacheca.scegliBacheca();
@@ -91,4 +116,6 @@ public class ToDo{
         int nuovaPosizione = Integer.parseInt(Main.sc.nextLine());
         Main.bacheche.get(titolo).spostaToDo(indice, nuovaPosizione);
     }
+
+
 }

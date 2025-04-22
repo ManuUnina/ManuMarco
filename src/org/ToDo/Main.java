@@ -6,18 +6,20 @@ import java.util.Scanner;
 public class Main {
     public static Map<Titolo, Bacheca> bacheche = new EnumMap<>(Titolo.class);
     public static Scanner sc = new Scanner(System.in);
+    public static Utente utenteRegistrato;
+
     public static void main(String[] args) {
-        Utente utenteRegistrato = new Utente("manu@email.com", "cane123");
+        utenteRegistrato = new Utente("manu", "cane123");
 
         System.out.println("Sei già registrato? (s/n)\n");
         String risposta = sc.nextLine();
 
         boolean accessoConsentito = false;
 
-        if(risposta.equalsIgnoreCase("s")) {
-            if(utenteRegistrato == null) {
+        if (risposta.equalsIgnoreCase("s")) {
+            /*if(utenteRegistrato == null) {
                 utenteRegistrato=new Utente("esempio@email.com", "password123");
-            }
+            }*/
 
             System.out.print("Inserisci un email:\n");
             String email = sc.nextLine();
@@ -25,13 +27,13 @@ public class Main {
             System.out.print("Inserisci la password:\n");
             String password = sc.nextLine();
 
-            if(utenteRegistrato.verificaCredenziali(email, password)) {
+            if (utenteRegistrato.verificaCredenziali(email, password)) {
                 System.out.println("Registrato correttamente\n");
                 accessoConsentito = true;
-            }else {
+            } else {
                 System.out.println("Errore\n");
             }
-        }else{
+        } else {
             System.out.print("Inserisci un email per registrarti:\n");
             String nuovaEmail = sc.nextLine();
 
@@ -42,11 +44,11 @@ public class Main {
             System.out.println("Registrazione completata\n");
             accessoConsentito = true;
         }
-        if(accessoConsentito) {
+        if (accessoConsentito) {
             Bacheca.inizializzaBacheche();
             boolean esci = false;
 
-            while(!esci) {
+            while (!esci) {
                 System.out.println("\n--- Gestione ToDo ---");
                 System.out.println("1. Visualizza Bacheche");
                 System.out.println("2. Aggiungi ToDo");
@@ -54,22 +56,25 @@ public class Main {
                 System.out.println("4. Elimina ToDo");
                 System.out.println("5. Sposta ToDo tra Bacheche");
                 System.out.println("6. Cambia ordine ToDo ");
-                System.out.println("7. Esci");
+                System.out.println("7. Aggiungi utenti al ToDo ");
+                System.out.println("8. Esci");
                 System.out.print("Scelta: ");
                 int scelta = Integer.parseInt(sc.nextLine());
 
-                switch(scelta) {
+                switch (scelta) {
                     case 1 -> Bacheca.visualizzaBacheche();
                     case 2 -> ToDo.aggiungiToDo();
                     case 3 -> ToDo.modificaToDo();
                     case 4 -> ToDo.eliminaToDo();
                     case 5 -> ToDo.spostaToDo();
                     case 6 -> ToDo.cambiaOrdineToDo();
-                    case 7 -> esci = true;
+                    case 7 -> ToDo.aggiungiUtenti();
+                    case 8 -> esci = true;
                     default -> System.out.println("Errore\n");
                 }
             }
         }
         sc.close();
     }
+
 }
