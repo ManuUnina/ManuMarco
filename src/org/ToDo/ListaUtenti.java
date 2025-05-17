@@ -8,9 +8,9 @@ public class ListaUtenti {
 
 
 
-    public ListaUtenti(String Autore){
+    public ListaUtenti(String Autore, ArrayList<String> Lista) {
         this.Autore=Autore;
-        this.Lista=new ArrayList<>();
+        this.Lista=new ArrayList<String>(Lista);
     }
 
     public ArrayList<String> getLista(){
@@ -43,5 +43,5 @@ public class ListaUtenti {
     public String toString() {
         return "Autore: " + Autore + "\nCondiviso con: " + Lista.toString();
     }
-
 }
+

@@ -1,6 +1,7 @@
 package org.ToDo;
-import Controller.Controller;
-import gui.MainFrame;
+//import Controller.Controller;
+//import gui.MainFrame;
+
 
 import java.util.EnumMap;
 import java.util.Map;
@@ -13,11 +14,12 @@ public class Main {
 
     public static void main(String[] args) {
 
-        javax.swing.SwingUtilities.invokeLater(() -> {
+       /* javax.swing.SwingUtilities.invokeLater(() -> {
             Controller Controller = new Controller();
             MainFrame frame = new MainFrame(Controller);
             frame.setVisible(true);
         });
+        */
 
         utenteRegistrato = new Utente("manu", "cane123");
 
@@ -66,7 +68,7 @@ public class Main {
                 System.out.println("4. Elimina ToDo");
                 System.out.println("5. Sposta ToDo tra Bacheche");
                 System.out.println("6. Cambia ordine ToDo ");
-                System.out.println("7. Aggiungi utenti al ToDo ");
+                // System.out.println("7. Aggiungi utenti al ToDo ");
                 System.out.println("8. Esci");
                 System.out.print("Scelta: ");
                 int scelta = Integer.parseInt(sc.nextLine());
@@ -78,7 +80,7 @@ public class Main {
                     case 4 -> ToDo.eliminaToDo();
                     case 5 -> ToDo.spostaToDo();
                     case 6 -> ToDo.cambiaOrdineToDo();
-                    case 7 -> ToDo.aggiungiUtenti();
+                    // case 7 -> ToDo.aggiungiUtenti();
                     case 8 -> esci = true;
                     default -> System.out.println("Errore\n");
                 }

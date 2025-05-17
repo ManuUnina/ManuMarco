@@ -1,6 +1,7 @@
 package org.ToDo;
 import java.util.ArrayList;
 import java.util.List;
+
 public class Bacheca {
     public Titolo titolo;
     private String descrizione;
