@@ -28,20 +28,44 @@ public class Controller {
     }
 
     public void init() {
-        if (gestisciAutenticazione()) {
-            view = new View(this);
-            view.setVisible(true);
-        } else {
-            JOptionPane.showMessageDialog(null, "Autenticazione fallita o annullata. L'applicazione si chiuderà.",
-                    "Chiusura Applicazione", JOptionPane.INFORMATION_MESSAGE);
-            System.exit(0);
+        while (true) { // Ciclo principale per l'autenticazione
+            boolean autenticazioneRiuscita = gestisciAutenticazione();
+
+            if (autenticazioneRiuscita) {
+                // Se l'autenticazione ha successo, crea e mostra la view principale
+                // e esci dal ciclo di autenticazione (e dal metodo init)
+                view = new View(this); // Assumendo che 'View' sia la tua classe GUI.View
+                view.setVisible(true);
+                return; // Esce dal metodo init, l'applicazione principale è avviata
+            } else {
+                // L'autenticazione non è riuscita (login fallito e annullato, registrazione annullata,
+                // o l'utente ha chiuso il dialogo iniziale "Login/Registrati").
+                // Chiediamo all'utente se vuole uscire dall'applicazione o riprovare.
+                int sceltaUscita = JOptionPane.showConfirmDialog(
+                        null, // Finestra genitore (null per centrarlo)
+                        "Accesso non completata. Desideri uscire dall'applicazione?",
+                        "Esci o Riprova?", // Titolo del dialogo
+                        JOptionPane.YES_NO_OPTION, // Bottoni Sì/No
+                        JOptionPane.QUESTION_MESSAGE); // Icona di domanda
+
+                if (sceltaUscita == JOptionPane.YES_OPTION) {
+                    // L'utente ha scelto di uscire
+                    JOptionPane.showMessageDialog(null, "L'applicazione si chiuderà.",
+                            "Chiusura Applicazione", JOptionPane.INFORMATION_MESSAGE);
+                    System.exit(0); // Termina l'applicazione
+                    return; // In realtà non necessario dopo System.exit(0), ma per coerenza logica
+                }
+                // Se l'utente sceglie NO (o chiude il dialogo di conferma uscita),
+                // il ciclo 'while(true)' continuerà, e il metodo gestisciAutenticazione()
+                // verrà chiamato di nuovo, ripresentando la schermata "Login/Registrati".
+            }
         }
     }
 
     private boolean gestisciAutenticazione() {
         String[] opzioni = {"Login", "Registrati"};
         int scelta = JOptionPane.showOptionDialog(null, "Benvenuto! Cosa desideri fare?",
-                "Autenticazione ToDo App",
+                "ToDo App",
                 JOptionPane.DEFAULT_OPTION, JOptionPane.INFORMATION_MESSAGE,
                 null, opzioni, opzioni[0]);
 
