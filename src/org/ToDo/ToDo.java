@@ -6,6 +6,8 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.regex.Pattern;
+import org.ToDo.Utente;
+
 
 public class ToDo{
     public String titolo;
@@ -105,7 +107,7 @@ public class ToDo{
         String descrizione = Main.sc.nextLine();
 
         //autore
-        String autore = Main.utenteRegistrato.getemail();
+        String autore = Main.utenteRegistrato.getEmail();
 
         //assegnazine data
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
