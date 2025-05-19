@@ -1,7 +1,4 @@
 package org.ToDo;
-//import Controller.Controller;
-//import gui.MainFrame;
-
 
 import java.util.EnumMap;
 import java.util.Map;
@@ -13,13 +10,6 @@ public class Main {
     public static Utente utenteRegistrato;
 
     public static void main(String[] args) {
-
-       /* javax.swing.SwingUtilities.invokeLater(() -> {
-            Controller Controller = new Controller();
-            MainFrame frame = new MainFrame(Controller);
-            frame.setVisible(true);
-        });
-        */
 
         utenteRegistrato = new Utente("manu", "cane123");
 
