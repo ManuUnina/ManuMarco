@@ -9,6 +9,7 @@ import gui.View;
 import javax.swing.JOptionPane;
 import javax.swing.JTextField;
 import javax.swing.JPasswordField;
+import java.time.LocalDate; // Aggiunto per il tipo LocalDate
 import java.util.EnumMap;
 import java.util.Map;
 
@@ -19,13 +20,13 @@ public class Controller {
 
     public Controller() {
         for (Titolo t : Titolo.values()) {
-            // Inizializza con una descrizione di default se necessario
             bacheche.put(t, new Bacheca(t, " " + t.name()));
         }
         Utente.popolaUtentiIniziali();
     }
 
     public void init() {
+        // ... (codice del costruttore e di init invariato) ...
         while (true) {
             boolean autenticazioneRiuscita = gestisciAutenticazione();
 
@@ -51,8 +52,8 @@ public class Controller {
         }
     }
 
-
     private boolean gestisciAutenticazione() {
+        // ... (codice invariato) ...
         String[] opzioni = {"Login", "Registrati"};
         int scelta = JOptionPane.showOptionDialog(null, "Benvenuto! Cosa desideri fare?",
                 "ToDo App",
@@ -73,6 +74,7 @@ public class Controller {
     }
 
     private boolean eseguiLoginDialog() {
+        // ... (codice invariato) ...
         JTextField emailField = new JTextField(20);
         JPasswordField passwordField = new JPasswordField(20);
         Object[] messaggio = {
@@ -97,6 +99,7 @@ public class Controller {
     }
 
     private boolean eseguiRegistrazioneDialog() {
+        // ... (codice invariato) ...
         JTextField emailField = new JTextField(20);
         JPasswordField passwordField = new JPasswordField(20);
         JPasswordField confermaPasswordField = new JPasswordField(20);
@@ -136,6 +139,7 @@ public class Controller {
     }
 
     public void eseguiLogout() {
+        // ... (codice invariato) ...
         if (view != null) {
             view.dispose();
         }
@@ -143,7 +147,6 @@ public class Controller {
         JOptionPane.showMessageDialog(null, "Logout effettuato con successo.", "Logout", JOptionPane.INFORMATION_MESSAGE);
         new Controller().init();
     }
-
 
     public Utente getUtenteCorrente() {
         return Utente.getUtenteCorrenteAutenticato();
@@ -153,7 +156,7 @@ public class Controller {
         return bacheche;
     }
 
-    public void aggiungiToDo(Titolo titolo, ToDo todo) {
+    public void aggiungiToDo(Titolo titolo, ToDo todo) { // Firma invariata
         Bacheca bacheca = bacheche.get(titolo);
         if (bacheca != null) {
             bacheca.aggiungiToDo(todo);
@@ -161,6 +164,7 @@ public class Controller {
     }
 
     public void rimuoviToDo(Titolo titolo, int index) {
+        // ... (codice invariato) ...
         Bacheca bacheca = bacheche.get(titolo);
         if (bacheca != null && index >= 0 && index < bacheca.getToDos().size()) {
             bacheca.rimuoviToDo(index);
@@ -168,6 +172,7 @@ public class Controller {
     }
 
     public ToDo getToDoFromBacheca(Titolo titoloBacheca, int todoIndex) {
+        // ... (codice invariato) ...
         Bacheca bacheca = bacheche.get(titoloBacheca);
         if (bacheca != null && todoIndex >= 0 && todoIndex < bacheca.getToDos().size()) {
             return bacheca.getToDos().get(todoIndex);
@@ -175,18 +180,22 @@ public class Controller {
         return null;
     }
 
-    public void modificaToDo(Titolo titoloBacheca, int todoIndex, String nuovoTitolo, String nuovaDescrizione) {
+    // Firma modificata per includere scadenza e stato
+    public void modificaToDo(Titolo titoloBacheca, int todoIndex, String nuovoTitolo, String nuovaDescrizione, LocalDate nuovaScadenza, boolean nuovoStato) {
         Bacheca bacheca = bacheche.get(titoloBacheca);
         if (bacheca != null) {
             ToDo toDoDaModificare = bacheca.getToDos().get(todoIndex);
             if (toDoDaModificare != null) {
                 toDoDaModificare.setTitolo(nuovoTitolo);
                 toDoDaModificare.setDescrizione(nuovaDescrizione);
+                toDoDaModificare.setScadenza(nuovaScadenza); // Imposta nuova scadenza
+                toDoDaModificare.setStato(nuovoStato);     // Imposta nuovo stato
             }
         }
     }
 
     public void spostaToDoGUI(Titolo bachecaOrigineTitolo, int todoIndex, Titolo bachecaDestinazioneTitolo) {
+        // ... (codice invariato) ...
         Bacheca bachecaOrigine = bacheche.get(bachecaOrigineTitolo);
         Bacheca bachecaDestinazione = bacheche.get(bachecaDestinazioneTitolo);
 
@@ -202,11 +211,11 @@ public class Controller {
         }
     }
 
-    // Nuovo metodo per modificare la descrizione di una bacheca
     public void modificaDescrizioneBacheca(Titolo titoloBacheca, String nuovaDescrizione) {
+        // ... (codice invariato) ...
         Bacheca bacheca = bacheche.get(titoloBacheca);
         if (bacheca != null) {
-            bacheca.setDescrizione(nuovaDescrizione); // Utilizza il setter esistente in Bacheca.java
+            bacheca.setDescrizione(nuovaDescrizione);
         } else {
             System.err.println("Tentativo di modificare la descrizione di una bacheca non esistente: " + titoloBacheca);
         }
