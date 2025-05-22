@@ -1,16 +1,17 @@
 package org.ToDo;
+
 import java.util.ArrayList;
 import java.util.List;
 
 public class Bacheca {
     public Titolo titolo;
     private String descrizione;
-    private List<ToDo> ToDos;
+    private List<ToDo> toDos; // Rinominato da ToDos a toDos per convenzione
 
     public Bacheca(Titolo titolo, String descrizione) {
         this.titolo = titolo;
         this.descrizione = descrizione;
-        this.ToDos = new ArrayList<>();
+        this.toDos = new ArrayList<>(); // Usa il campo rinominato
     }
 
     public Titolo getTitolo() {
@@ -26,56 +27,38 @@ public class Bacheca {
     }
 
     public List<ToDo> getToDos() {
-        return ToDos;
+        return toDos; // Usa il campo rinominato
     }
 
     public void aggiungiToDo(ToDo todo) {
-        ToDos.add(todo);
+        toDos.add(todo); // Usa il campo rinominato
     }
 
     public void rimuoviToDo(int indice) {
-        if (indice >= 0 && indice < ToDos.size()) {
-            ToDos.remove(indice);
+        if (indice >= 0 && indice < toDos.size()) { // Usa il campo rinominato
+            toDos.remove(indice); // Usa il campo rinominato
         }
     }
 
     public void spostaToDo(int indice, int nuovaPosizione) {
-        if (indice >= 0 && indice < ToDos.size() && nuovaPosizione >= 0 && nuovaPosizione < ToDos.size()) {
-            ToDo todo = ToDos.remove(indice);
-            ToDos.add(nuovaPosizione, todo);
+        if (indice >= 0 && indice < toDos.size() && nuovaPosizione >= 0 && nuovaPosizione < toDos.size()) { // Usa il campo rinominato
+            ToDo todo = toDos.remove(indice); // Usa il campo rinominato
+            toDos.add(nuovaPosizione, todo); // Usa il campo rinominato
         }
-
     }
 
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder(titolo + ": " + descrizione + "\n");
-        for (int i = 0; i < ToDos.size(); i++) {
-            sb.append(i).append(": ").append(ToDos.get(i)).append("\n");
+        for (int i = 0; i < toDos.size(); i++) { // Usa il campo rinominato
+            sb.append(i).append(": ").append(toDos.get(i)).append("\n"); // Usa il campo rinominato
         }
         return sb.toString();
     }
 
-    public static void inizializzaBacheche() {
-        Main.bacheche.put(Titolo.UNIVERSITA, new Bacheca(Titolo.UNIVERSITA, "Compiti e lezioni"));
-        Main.bacheche.put(Titolo.LAVORO, new Bacheca(Titolo.LAVORO, "Progetti lavorativi"));
-        Main.bacheche.put(Titolo.TEMPO_LIBERO, new Bacheca(Titolo.TEMPO_LIBERO, "Hobby e relax"));
-    }
-
-    static void visualizzaBacheche() {
-        Main.bacheche.values().forEach(System.out::println);
-    }
-
-    public static Titolo scegliBacheca() {
-        System.out.println("Scegli bacheca:");
-        for (Titolo titolo : Titolo.values()) {
-            System.out.println("- " + titolo);
-        }
-        System.out.print("Titolo: ");
-        return Titolo.valueOf(Main.sc.nextLine().toUpperCase());
-    }
-
-    public static void visualizzaBacheca(Titolo titolo) {
-        System.out.println(Main.bacheche.get(titolo));
-    }
+    // RIMUOVI TUTTI I SEGUENTI METODI STATICI:
+    // public static void inizializzaBacheche() { ... }
+    // static void visualizzaBacheche() { ... }
+    // public static Titolo scegliBacheca() { ... }
+    // public static void visualizzaBacheca(Titolo titolo) { ... }
 }

@@ -9,7 +9,8 @@ import gui.View;
 import javax.swing.JOptionPane;
 import javax.swing.JTextField;
 import javax.swing.JPasswordField;
-import java.time.LocalDate; // Aggiunto per il tipo LocalDate
+import java.awt.Color; // Importa la classe Color
+import java.time.LocalDate;
 import java.util.EnumMap;
 import java.util.Map;
 
@@ -92,7 +93,7 @@ public class Controller {
                 return true;
             } else {
                 JOptionPane.showMessageDialog(null, "Credenziali non valide. Riprova.", "Errore di Login", JOptionPane.ERROR_MESSAGE);
-                return eseguiLoginDialog();
+                return eseguiLoginDialog(); // Riprova login
             }
         }
         return false;
@@ -132,7 +133,7 @@ public class Controller {
                 return true;
             } else {
                 JOptionPane.showMessageDialog(null, "L'email '" + email + "' è già registrata. Scegli un'altra email o effettua il login.", "Errore Registrazione", JOptionPane.ERROR_MESSAGE);
-                return eseguiRegistrazioneDialog();
+                return eseguiRegistrazioneDialog(); // Riprova registrazione
             }
         }
         return false;
@@ -145,6 +146,8 @@ public class Controller {
         }
         Utente.logout();
         JOptionPane.showMessageDialog(null, "Logout effettuato con successo.", "Logout", JOptionPane.INFORMATION_MESSAGE);
+        // Riavvia il ciclo di autenticazione creando un nuovo controller e chiamando init.
+        // Questo potrebbe non essere l'approccio ideale per applicazioni complesse (meglio un gestore di stato/viste).
         new Controller().init();
     }
 
@@ -156,7 +159,7 @@ public class Controller {
         return bacheche;
     }
 
-    public void aggiungiToDo(Titolo titolo, ToDo todo) { // Firma invariata
+    public void aggiungiToDo(Titolo titolo, ToDo todo) {
         Bacheca bacheca = bacheche.get(titolo);
         if (bacheca != null) {
             bacheca.aggiungiToDo(todo);
@@ -180,16 +183,22 @@ public class Controller {
         return null;
     }
 
-    // Firma modificata per includere scadenza e stato
-    public void modificaToDo(Titolo titoloBacheca, int todoIndex, String nuovoTitolo, String nuovaDescrizione, LocalDate nuovaScadenza, boolean nuovoStato) {
+    // Firma modificata per includere scadenza, stato e COLORE
+    public void modificaToDo(Titolo titoloBacheca, int todoIndex, String nuovoTitolo, String nuovaDescrizione, LocalDate nuovaScadenza, boolean nuovoStato, Color nuovoColore) { // Aggiunto Color nuovoColore
         Bacheca bacheca = bacheche.get(titoloBacheca);
         if (bacheca != null) {
-            ToDo toDoDaModificare = bacheca.getToDos().get(todoIndex);
-            if (toDoDaModificare != null) {
-                toDoDaModificare.setTitolo(nuovoTitolo);
-                toDoDaModificare.setDescrizione(nuovaDescrizione);
-                toDoDaModificare.setScadenza(nuovaScadenza); // Imposta nuova scadenza
-                toDoDaModificare.setStato(nuovoStato);     // Imposta nuovo stato
+            // Assicurati che l'indice sia valido
+            if (todoIndex >= 0 && todoIndex < bacheca.getToDos().size()) {
+                ToDo toDoDaModificare = bacheca.getToDos().get(todoIndex);
+                if (toDoDaModificare != null) {
+                    toDoDaModificare.setTitolo(nuovoTitolo);
+                    toDoDaModificare.setDescrizione(nuovaDescrizione);
+                    toDoDaModificare.setScadenza(nuovaScadenza);
+                    toDoDaModificare.setStato(nuovoStato);
+                    toDoDaModificare.setColore(nuovoColore); // Imposta nuovo colore
+                }
+            } else {
+                System.err.println("Indice ToDo non valido per la modifica: " + todoIndex);
             }
         }
     }
