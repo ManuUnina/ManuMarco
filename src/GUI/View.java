@@ -1,9 +1,7 @@
 package gui;
 
 import controller.Controller;
-import org.ToDo.Bacheca;
-import org.ToDo.Titolo;
-import org.ToDo.ToDo;
+import org.ToDo.*;
 
 import javax.swing.*;
 import java.awt.*;
@@ -14,9 +12,62 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 
+// Classe helper per associare un nome a un colore per la JComboBox
+class NamedColor { // Assicurati che questa classe sia accessibile (es. file separato o interna statica)
+    public final String name;
+    public final Color color;
+
+    public NamedColor(String name, Color color) {
+        this.name = name;
+        this.color = color;
+    }
+
+    @Override
+    public String toString() {
+        return name; // Questo testo apparirà nella JComboBox
+    }
+
+    public Color getColor() {
+        return color;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    // Metodo statico per ottenere l'array di colori predefiniti
+    public static NamedColor[] getPredefinedColors() {
+        return new NamedColor[]{
+                new NamedColor("Bianco", Color.WHITE),
+                new NamedColor("Rosso Chiaro", new Color(255, 204, 203)),
+                new NamedColor("Verde Chiaro", new Color(204, 255, 204)),
+                new NamedColor("Blu Chiaro", new Color(204, 229, 255)),
+                new NamedColor("Giallo Chiaro", new Color(255, 255, 204)),
+                new NamedColor("Arancione Chiaro", new Color(255, 229, 204)),
+                new NamedColor("Viola Chiaro", new Color(229, 204, 255))
+        };
+    }
+
+    // Metodo per trovare un NamedColor per un dato Color (utile per pre-selezionare nella modifica)
+    public static NamedColor findNamedColor(Color colorToFind) {
+        if (colorToFind == null) {
+            return getPredefinedColors()[0]; // Default a Bianco se il colore è null
+        }
+        for (NamedColor namedColor : getPredefinedColors()) {
+            if (namedColor.getColor().equals(colorToFind)) {
+                return namedColor;
+            }
+        }
+        // Se il colore esistente non è uno dei predefiniti, ritorna Bianco come default
+        // o gestisci come preferisci (es. mantieni il colore originale se possibile,
+        // ma qui la JComboBox mostrerà solo i predefiniti).
+        return getPredefinedColors()[0];
+    }
+}
+
+
 public class View extends JFrame {
     private final JComboBox<Titolo> bachecaSelector;
-    // Modifica: DefaultListModel e JList ora usano ToDo
     private final DefaultListModel<ToDo> todoListModel;
     private final JList<ToDo> todoList;
     private final JButton addToDoButton;
@@ -28,6 +79,7 @@ public class View extends JFrame {
     private final Controller controller;
     private final JButton logoutButton;
     private final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    private final NamedColor[] predefinedColors = NamedColor.getPredefinedColors();
 
     public View(Controller controller) {
         this.controller = controller;
@@ -40,10 +92,9 @@ public class View extends JFrame {
         bachecaSelector = new JComboBox<>(Titolo.values());
         descrizioneLabel = new JLabel("Descrizione...");
 
-        // Modifica: Inizializzazione per ToDo
         todoListModel = new DefaultListModel<>();
         todoList = new JList<>(todoListModel);
-        todoList.setCellRenderer(new ToDoCellRenderer()); // Imposta il renderer personalizzato
+        todoList.setCellRenderer(new ToDoCellRenderer());
 
         addToDoButton = new JButton("Aggiungi ToDo");
         removeToDoButton = new JButton("Rimuovi ToDo");
@@ -94,7 +145,6 @@ public class View extends JFrame {
                 descrizioneLabel.setText(" " + bacheca.getDescrizione());
                 todoListModel.clear();
                 for (ToDo t : bacheca.getToDos()) {
-                    // Modifica: Aggiunge l'oggetto ToDo direttamente al modello
                     todoListModel.addElement(t);
                 }
             } else {
@@ -113,20 +163,21 @@ public class View extends JFrame {
         JTextField dataScadenzaField = new JTextField(10);
         JCheckBox completatoCheckBox = new JCheckBox("Completato");
 
-        // Componenti per la selezione del colore
-        final Color[] selectedColor = {Color.WHITE}; // Colore predefinito
-        JButton colorButton = new JButton("Scegli Colore");
-        JLabel colorPreview = new JLabel("  ");
-        colorPreview.setOpaque(true);
-        colorPreview.setBackground(selectedColor[0]);
-        colorPreview.setPreferredSize(new Dimension(20, 20));
-        colorButton.addActionListener(ev -> {
-            Color chosenColor = JColorChooser.showDialog(this, "Scegli un colore per il ToDo", selectedColor[0]);
-            if (chosenColor != null) {
-                selectedColor[0] = chosenColor;
-                colorPreview.setBackground(chosenColor);
+        // Componenti per la selezione del colore con JComboBox
+        JComboBox<NamedColor> colorSelector = new JComboBox<>(predefinedColors);
+        colorSelector.setSelectedIndex(0); // Default a Bianco
+
+        // Preview del colore (opzionale ma utile)
+        JPanel colorPreviewPanel = new JPanel();
+        colorPreviewPanel.setBackground(predefinedColors[0].getColor());
+        colorPreviewPanel.setPreferredSize(new Dimension(20, 20));
+        colorSelector.addActionListener(ev -> {
+            NamedColor selected = (NamedColor) colorSelector.getSelectedItem();
+            if (selected != null) {
+                colorPreviewPanel.setBackground(selected.getColor());
             }
         });
+
 
         JPanel panel = new JPanel(new GridLayout(0, 1));
         panel.add(new JLabel("Titolo:"));
@@ -138,9 +189,9 @@ public class View extends JFrame {
         panel.add(completatoCheckBox);
 
         JPanel colorPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        colorPanel.add(colorButton);
-        colorPanel.add(new JLabel(" Colore:"));
-        colorPanel.add(colorPreview);
+        colorPanel.add(new JLabel("Colore:"));
+        colorPanel.add(colorSelector);
+        colorPanel.add(colorPreviewPanel); // Aggiunge la preview
         panel.add(colorPanel);
 
 
@@ -149,7 +200,7 @@ public class View extends JFrame {
             Titolo selezionato = (Titolo) bachecaSelector.getSelectedItem();
             if (selezionato != null && controller.getUtenteCorrente() != null) {
                 String dataInput = dataScadenzaField.getText().trim();
-                LocalDate scadenza = LocalDate.now().plusDays(7);
+                LocalDate scadenza = LocalDate.now().plusDays(7); // Default
                 if (!dataInput.isEmpty()) {
                     try {
                         scadenza = LocalDate.parse(dataInput, dateFormatter);
@@ -161,17 +212,19 @@ public class View extends JFrame {
                 }
 
                 boolean stato = completatoCheckBox.isSelected();
+                NamedColor namedColorSelected = (NamedColor) colorSelector.getSelectedItem();
+                Color coloreScelto = (namedColorSelected != null) ? namedColorSelected.getColor() : Color.WHITE;
 
                 ToDo nuovo = new ToDo(
                         titoloField.getText(),
                         descrizioneField.getText(),
                         controller.getUtenteCorrente().getEmail(),
                         scadenza,
-                        "N/A",
+                        "N/A", // Posizione, se necessaria
                         stato,
-                        "http://example.com",
-                        new ArrayList<>(),
-                        selectedColor[0] // Passa il colore selezionato
+                        "http://example.com", // URL, se necessario
+                        new ArrayList<>(), // Lista utenti, se necessaria
+                        coloreScelto
                 );
                 controller.aggiungiToDo(selezionato, nuovo);
                 aggiornaVistaCompletaBacheca();
@@ -182,18 +235,14 @@ public class View extends JFrame {
     }
 
     private void modificaToDoSelezionato(ActionEvent e) {
-        // Modifica: usa getSelectedValue() dato che la lista ora contiene ToDo
         ToDo toDoDaModificare = todoList.getSelectedValue();
-        int selectedIndex = todoList.getSelectedIndex(); // L'indice è ancora necessario per il controller
+        int selectedIndex = todoList.getSelectedIndex();
         Titolo bachecaSelezionata = (Titolo) bachecaSelector.getSelectedItem();
 
-        if (toDoDaModificare == null) { // Se nessun ToDo è selezionato
+        if (toDoDaModificare == null) {
             JOptionPane.showMessageDialog(this, "Seleziona un ToDo da modificare.", "Attenzione", JOptionPane.WARNING_MESSAGE);
             return;
         }
-        // Non è più necessario chiamare controller.getToDoFromBacheca se JList<ToDo> è usato correttamente.
-        // ToDo toDoDaModificare = controller.getToDoFromBacheca(bachecaSelezionata, selectedIndex);
-
         if (bachecaSelezionata == null) {
             JOptionPane.showMessageDialog(this, "Nessuna bacheca selezionata.", "Errore", JOptionPane.ERROR_MESSAGE);
             return;
@@ -204,18 +253,19 @@ public class View extends JFrame {
         JTextField dataScadenzaField = new JTextField(toDoDaModificare.getScadenza() != null ? toDoDaModificare.getScadenza().format(dateFormatter) : "");
         JCheckBox completatoCheckBox = new JCheckBox("Completato", toDoDaModificare.getStato());
 
-        // Componenti per la modifica del colore
-        final Color[] currentSelectedColor = {toDoDaModificare.getColore() != null ? toDoDaModificare.getColore() : Color.WHITE};
-        JButton colorButtonModify = new JButton("Scegli Colore");
-        JLabel colorPreviewModify = new JLabel("  ");
-        colorPreviewModify.setOpaque(true);
-        colorPreviewModify.setBackground(currentSelectedColor[0]);
-        colorPreviewModify.setPreferredSize(new Dimension(20, 20));
-        colorButtonModify.addActionListener(ev -> {
-            Color chosenColor = JColorChooser.showDialog(this, "Modifica colore del ToDo", currentSelectedColor[0]);
-            if (chosenColor != null) {
-                currentSelectedColor[0] = chosenColor;
-                colorPreviewModify.setBackground(chosenColor);
+        // Componenti per la modifica del colore con JComboBox
+        JComboBox<NamedColor> colorSelectorModify = new JComboBox<>(predefinedColors);
+        NamedColor currentColor = NamedColor.findNamedColor(toDoDaModificare.getColore());
+        colorSelectorModify.setSelectedItem(currentColor);
+
+        // Preview del colore (opzionale ma utile)
+        JPanel colorPreviewPanelModify = new JPanel();
+        colorPreviewPanelModify.setBackground(currentColor.getColor());
+        colorPreviewPanelModify.setPreferredSize(new Dimension(20, 20));
+        colorSelectorModify.addActionListener(ev -> {
+            NamedColor selected = (NamedColor) colorSelectorModify.getSelectedItem();
+            if (selected != null) {
+                colorPreviewPanelModify.setBackground(selected.getColor());
             }
         });
 
@@ -229,9 +279,9 @@ public class View extends JFrame {
         panel.add(completatoCheckBox);
 
         JPanel colorPanelModify = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        colorPanelModify.add(colorButtonModify);
-        colorPanelModify.add(new JLabel(" Colore:"));
-        colorPanelModify.add(colorPreviewModify);
+        colorPanelModify.add(new JLabel("Colore:"));
+        colorPanelModify.add(colorSelectorModify);
+        colorPanelModify.add(colorPreviewPanelModify); // Aggiunge la preview
         panel.add(colorPanelModify);
 
 
@@ -241,34 +291,33 @@ public class View extends JFrame {
             String nuovaDescrizione = descrizioneField.getText();
             String dataInput = dataScadenzaField.getText().trim();
             boolean nuovoStato = completatoCheckBox.isSelected();
+            NamedColor namedColorSelected = (NamedColor) colorSelectorModify.getSelectedItem();
+            Color nuovoColore = (namedColorSelected != null) ? namedColorSelected.getColor() : Color.WHITE;
 
-            LocalDate nuovaScadenza = toDoDaModificare.getScadenza();
+
+            LocalDate nuovaScadenza = toDoDaModificare.getScadenza(); // Mantiene la vecchia se non modificata
             if (!dataInput.isEmpty()) {
                 try {
                     nuovaScadenza = LocalDate.parse(dataInput, dateFormatter);
                 } catch (DateTimeParseException ex) {
                     JOptionPane.showMessageDialog(this, "Formato data non valido. Usare gg/mm/aaaa.\nLa data di scadenza non sarà modificata.", "Errore Data", JOptionPane.ERROR_MESSAGE);
                 }
-            } else {
-                // Se il campo data è vuoto, si potrebbe decidere di rimuovere la scadenza (impostarla a null)
-                // o mantenere quella esistente. Qui manteniamo quella esistente o una predefinita.
-                if (nuovaScadenza == null && toDoDaModificare.getScadenza() == null) { // se non c'era e non viene inserita
-                    JOptionPane.showMessageDialog(this, "Data di scadenza non specificata.", "Info Data", JOptionPane.INFORMATION_MESSAGE);
-                    // nuovaScadenza resta null, o si può impostare un default: LocalDate.now().plusDays(7);
-                } else if (dataInput.isEmpty() && toDoDaModificare.getScadenza() != null) {
-                    // L'utente ha cancellato la data, potremmo volerla impostare a null
-                    // nuovaScadenza = null; // opzionale, in base al comportamento desiderato
-                    JOptionPane.showMessageDialog(this, "Data di scadenza rimossa/non modificata.", "Info Data", JOptionPane.INFORMATION_MESSAGE);
-                }
+            } else if (toDoDaModificare.getScadenza() != null && dataInput.isEmpty()){
+                // L'utente ha cancellato la data, potremmo impostarla a null
+                // Per ora, se il campo è vuoto, manteniamo la data esistente o null se era già null.
+                // Se si vuole permettere di cancellare la data (rendendola null), si aggiunga:
+                // nuovaScadenza = null;
+                JOptionPane.showMessageDialog(this, "Il campo data è stato lasciato vuoto. La data di scadenza non è stata modificata o è stata rimossa se precedentemente impostata e ora il campo è vuoto.", "Info Data", JOptionPane.INFORMATION_MESSAGE);
             }
-            // Passa l'indice, non l'oggetto ToDo, perché il controller si aspetta l'indice.
-            controller.modificaToDo(bachecaSelezionata, selectedIndex, nuovoTitolo, nuovaDescrizione, nuovaScadenza, nuovoStato, currentSelectedColor[0]);
+
+
+            controller.modificaToDo(bachecaSelezionata, selectedIndex, nuovoTitolo, nuovaDescrizione, nuovaScadenza, nuovoStato, nuovoColore);
             aggiornaVistaCompletaBacheca();
         }
     }
 
     private void spostaToDoSelezionato(ActionEvent e) {
-        int selectedIndex = todoList.getSelectedIndex(); // Indice dell'elemento selezionato
+        int selectedIndex = todoList.getSelectedIndex();
         Titolo bachecaOrigine = (Titolo) bachecaSelector.getSelectedItem();
 
         if (selectedIndex < 0) {
@@ -281,8 +330,7 @@ public class View extends JFrame {
             return;
         }
 
-        Titolo[] tutteLeBacheche = Titolo.values();
-        ArrayList<Titolo> opzioniDestinazioneList = new ArrayList<>(Arrays.asList(tutteLeBacheche));
+        ArrayList<Titolo> opzioniDestinazioneList = new ArrayList<>(Arrays.asList(Titolo.values()));
         opzioniDestinazioneList.remove(bachecaOrigine);
 
         if (opzioniDestinazioneList.isEmpty()) {
@@ -301,19 +349,18 @@ public class View extends JFrame {
         if (result == JOptionPane.OK_OPTION) {
             Titolo bachecaDestinazione = (Titolo) destinazioneSelector.getSelectedItem();
             if (bachecaDestinazione != null) {
-                // Passa l'indice dell'elemento da spostare
                 controller.spostaToDoGUI(bachecaOrigine, selectedIndex, bachecaDestinazione);
-                aggiornaVistaCompletaBacheca();
+                aggiornaVistaCompletaBacheca(); // Aggiorna la vista per riflettere lo spostamento
             }
         }
     }
 
     private void rimuoviToDo(ActionEvent e) {
-        int selectedIndex = todoList.getSelectedIndex(); // Ottiene l'indice dell'elemento selezionato
+        int selectedIndex = todoList.getSelectedIndex();
         if (selectedIndex >= 0) {
             Titolo selezionato = (Titolo) bachecaSelector.getSelectedItem();
             if (selezionato != null) {
-                controller.rimuoviToDo(selezionato, selectedIndex); // Passa l'indice
+                controller.rimuoviToDo(selezionato, selectedIndex);
                 aggiornaVistaCompletaBacheca();
             }
         } else {
@@ -336,7 +383,6 @@ public class View extends JFrame {
         }
         String descrizioneAttuale = bachecaCorrente.getDescrizione();
 
-        // Utilizzo di showInputDialog per semplicità
         Object input = JOptionPane.showInputDialog(
                 this,
                 "Modifica descrizione per la bacheca '" + bachecaSelezionata.name() + "':",
@@ -346,9 +392,7 @@ public class View extends JFrame {
                 null,
                 descrizioneAttuale
         );
-        // JOptionPane.showInputDialog restituisce null se l'utente preme Annulla o chiude la finestra
-        // Altrimenti restituisce la stringa inserita (che può essere vuota se l'utente non scrive nulla e preme OK)
-        if (input != null) { // L'utente ha premuto OK
+        if (input != null) {
             String nuovaDescrizioneIngresso = input.toString();
             controller.modificaDescrizioneBacheca(bachecaSelezionata, nuovaDescrizioneIngresso);
             aggiornaVistaCompletaBacheca();
@@ -365,8 +409,6 @@ public class View extends JFrame {
 
         if (confirm == JOptionPane.YES_OPTION) {
             controller.eseguiLogout();
-            // La finestra corrente (View) verrà chiusa dal controller se necessario,
-            // o gestita nel riavvio del ciclo di autenticazione.
         }
     }
 }
@@ -376,7 +418,7 @@ class ToDoCellRenderer extends JLabel implements ListCellRenderer<ToDo> {
     private final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     public ToDoCellRenderer() {
-        setOpaque(true); // Fondamentale perché il background color sia visibile
+        setOpaque(true);
     }
 
     @Override
@@ -392,18 +434,31 @@ class ToDoCellRenderer extends JLabel implements ListCellRenderer<ToDo> {
                 setBackground(list.getSelectionBackground());
                 setForeground(list.getSelectionForeground());
             } else {
-                // Imposta il colore di sfondo personalizzato se presente, altrimenti usa quello di default della lista
                 setBackground(todo.getColore() != null ? todo.getColore() : list.getBackground());
-                setForeground(list.getForeground()); // Usa il colore di testo di default
+                // Per garantire una buona leggibilità, potresti voler impostare il colore del testo
+                // in base alla luminosità del colore di sfondo.
+                // Ad esempio, se lo sfondo è scuro, il testo dovrebbe essere chiaro.
+                // Qui usiamo un semplice default.
+                if (todo.getColore() != null && isColorDark(todo.getColore()) && todo.getColore() != Color.WHITE) {
+                    setForeground(Color.WHITE); // Testo bianco su sfondi scuri (escluso il bianco stesso)
+                } else {
+                    setForeground(list.getForeground()); // Colore testo di default
+                }
             }
         } else {
-            // Caso in cui l'oggetto ToDo sia null (non dovrebbe accadere con DefaultListModel<ToDo>)
             setText("");
             setBackground(list.getBackground());
             setForeground(list.getForeground());
         }
         return this;
     }
+    // Metodo helper per determinare se un colore è "scuro"
+    // Questa è una semplice implementazione, potresti volerne una più sofisticata.
+    private boolean isColorDark(Color color) {
+        if (color == null) return false;
+        // Calcola la luminanza percepita
+        double luminance = (0.299 * color.getRed() + 0.587 * color.getGreen() + 0.114 * color.getBlue()) / 255;
+        return luminance < 0.5; // Considera "scuro" se la luminanza è inferiore a 0.5
+    }
 }
-
 
