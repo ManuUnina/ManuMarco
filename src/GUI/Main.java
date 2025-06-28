@@ -1,4 +1,3 @@
-// Main.java
 package gui;
 
 import controller.Controller;

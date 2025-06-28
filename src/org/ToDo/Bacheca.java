@@ -4,15 +4,23 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Bacheca {
-    public Titolo titolo;
+    private Titolo titolo;
     private String descrizione;
-    private List<ToDo> toDos; // Rinominato da ToDos a toDos per convenzione
+    private String utenteEmail;
+    private List<ToDo> toDos;
 
-    public Bacheca(Titolo titolo, String descrizione) {
+    public Bacheca(Titolo titolo, String descrizione, String utenteEmail) {
         this.titolo = titolo;
         this.descrizione = descrizione;
-        this.toDos = new ArrayList<>(); // Usa il campo rinominato
+        this.utenteEmail = utenteEmail;
+        this.toDos = new ArrayList<>();
     }
+
+    // --- METODO MANCANTE AGGIUNTO QUI ---
+    public String getUtenteEmail() {
+        return utenteEmail;
+    }
+    // ------------------------------------
 
     public Titolo getTitolo() {
         return titolo;
@@ -27,38 +35,26 @@ public class Bacheca {
     }
 
     public List<ToDo> getToDos() {
-        return toDos; // Usa il campo rinominato
+        return toDos;
+    }
+
+    public void setToDos(List<ToDo> toDos) {
+        this.toDos = toDos;
     }
 
     public void aggiungiToDo(ToDo todo) {
-        toDos.add(todo); // Usa il campo rinominato
+        toDos.add(todo);
     }
 
     public void rimuoviToDo(int indice) {
-        if (indice >= 0 && indice < toDos.size()) { // Usa il campo rinominato
-            toDos.remove(indice); // Usa il campo rinominato
-        }
-    }
-
-    public void spostaToDo(int indice, int nuovaPosizione) {
-        if (indice >= 0 && indice < toDos.size() && nuovaPosizione >= 0 && nuovaPosizione < toDos.size()) { // Usa il campo rinominato
-            ToDo todo = toDos.remove(indice); // Usa il campo rinominato
-            toDos.add(nuovaPosizione, todo); // Usa il campo rinominato
+        if (indice >= 0 && indice < toDos.size()) {
+            toDos.remove(indice);
         }
     }
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder(titolo + ": " + descrizione + "\n");
-        for (int i = 0; i < toDos.size(); i++) { // Usa il campo rinominato
-            sb.append(i).append(": ").append(toDos.get(i)).append("\n"); // Usa il campo rinominato
-        }
-        return sb.toString();
+        // È utile per le JComboBox restituire il nome
+        return titolo.name();
     }
-
-    // RIMUOVI TUTTI I SEGUENTI METODI STATICI:
-    // public static void inizializzaBacheche() { ... }
-    // static void visualizzaBacheche() { ... }
-    // public static Titolo scegliBacheca() { ... }
-    // public static void visualizzaBacheca(Titolo titolo) { ... }
 }
