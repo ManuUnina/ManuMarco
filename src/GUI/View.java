@@ -1,18 +1,22 @@
 package gui;
 
 import controller.Controller;
-import org.ToDo.Bacheca; // Aggiornato
-import org.ToDo.Titolo;  // Aggiornato
-import org.ToDo.ToDo;    // Aggiornato
+import org.ToDo.Bacheca;
+import org.ToDo.Titolo;
+import org.ToDo.ToDo;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Vector;
 
 class NamedColor {
     public final String name;
@@ -26,7 +30,6 @@ class NamedColor {
     @Override
     public String toString() { return name; }
     public Color getColor() { return color; }
-    public String getName() { return name; }
 
     public static NamedColor[] getPredefinedColors() {
         return new NamedColor[]{
@@ -61,18 +64,15 @@ class ToDoCellRenderer extends JLabel implements ListCellRenderer<ToDo> {
         if (todo != null) {
             String statoStr = todo.getStato() ? "[X]" : "[ ]";
             String scadenzaStr = (todo.getScadenza() != null) ? todo.getScadenza().format(dateFormatter) : "N/D";
-            setText(String.format("%s %s (Scad: %s) - %s", statoStr, todo.getTitolo(), scadenzaStr, todo.getDescrizione()));
+            String immagineStr = todo.getImmagine() != null ? " (Immagine)" : "";
+            setText(String.format("%s %s (Scad: %s) - %s%s", statoStr, todo.getTitolo(), scadenzaStr, todo.getDescrizione(), immagineStr));
 
             if (isSelected) {
                 setBackground(list.getSelectionBackground());
                 setForeground(list.getSelectionForeground());
             } else {
                 setBackground(todo.getColore() != null ? todo.getColore() : list.getBackground());
-                if (todo.getColore() != null && isColorDark(todo.getColore())) {
-                    setForeground(Color.WHITE);
-                } else {
-                    setForeground(list.getForeground());
-                }
+                setForeground(isColorDark(todo.getColore()) ? Color.WHITE : list.getForeground());
             }
         } else {
             setText("");
@@ -89,12 +89,11 @@ class ToDoCellRenderer extends JLabel implements ListCellRenderer<ToDo> {
     }
 }
 
-
 public class View extends JFrame {
-    private final JComboBox<Titolo> bachecaSelector;
+    private final JComboBox<Object> bachecaSelector;
     private final DefaultListModel<ToDo> todoListModel;
     private final JList<ToDo> todoList;
-    private final JButton addToDoButton, removeToDoButton, modifyToDoButton, spostaToDoButton, logoutButton, modificaDescrizioneBachecaButton;
+    private final JButton addToDoButton, removeToDoButton, modifyToDoButton, spostaToDoButton, condividiToDoButton, logoutButton, modificaDescrizioneBachecaButton;
     private final JLabel descrizioneLabel;
     private final Controller controller;
     private final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
@@ -103,12 +102,15 @@ public class View extends JFrame {
     public View(Controller controller) {
         this.controller = controller;
 
-        setTitle("Gestione Bacheche - Utente: " + (controller.getUtenteCorrente() != null ? controller.getUtenteCorrente().getEmail() : "N/A"));
+        setTitle("Gestione Bacheche - Utente: " + controller.getUtenteCorrente().getEmail());
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setSize(800, 600);
         setLocationRelativeTo(null);
 
-        bachecaSelector = new JComboBox<>(Titolo.values());
+        Vector<Object> bachecaItems = new Vector<>(Arrays.asList(Titolo.values()));
+        bachecaItems.add("Condivisi con me");
+        bachecaSelector = new JComboBox<>(bachecaItems);
+
         descrizioneLabel = new JLabel("Descrizione...");
         todoListModel = new DefaultListModel<>();
         todoList = new JList<>(todoListModel);
@@ -118,6 +120,7 @@ public class View extends JFrame {
         removeToDoButton = new JButton("Rimuovi ToDo");
         modifyToDoButton = new JButton("Modifica ToDo");
         spostaToDoButton = new JButton("Sposta ToDo");
+        condividiToDoButton = new JButton("Condividi");
         logoutButton = new JButton("Logout");
         modificaDescrizioneBachecaButton = new JButton("Modifica Descrizione");
 
@@ -126,6 +129,7 @@ public class View extends JFrame {
         removeToDoButton.addActionListener(this::rimuoviToDo);
         modifyToDoButton.addActionListener(this::modificaToDoSelezionato);
         spostaToDoButton.addActionListener(this::spostaToDoSelezionato);
+        condividiToDoButton.addActionListener(this::condividiToDoSelezionato);
         logoutButton.addActionListener(this::performLogout);
         modificaDescrizioneBachecaButton.addActionListener(this::modificaDescrizioneBachecaSelezionata);
 
@@ -140,6 +144,7 @@ public class View extends JFrame {
         buttonPanel.add(addToDoButton);
         buttonPanel.add(modifyToDoButton);
         buttonPanel.add(spostaToDoButton);
+        buttonPanel.add(condividiToDoButton);
         buttonPanel.add(removeToDoButton);
         buttonPanel.add(logoutButton);
 
@@ -155,75 +160,100 @@ public class View extends JFrame {
     }
 
     private void aggiornaVistaCompletaBacheca() {
-        Titolo titoloSelezionato = (Titolo) bachecaSelector.getSelectedItem();
-        if (titoloSelezionato != null) {
-            Bacheca bacheca = controller.getBacheche().get(titoloSelezionato);
-            if (bacheca != null) {
-                descrizioneLabel.setText(" " + bacheca.getDescrizione());
-                todoListModel.clear();
-                for (ToDo t : bacheca.getToDos()) {
-                    todoListModel.addElement(t);
-                }
-            } else {
-                descrizioneLabel.setText("Bacheca non trovata.");
-                todoListModel.clear();
+        Object itemSelezionato = bachecaSelector.getSelectedItem();
+        Bacheca bachecaDaMostrare;
+        boolean isSharedView = false;
+
+        if (itemSelezionato instanceof Titolo) {
+            bachecaDaMostrare = controller.getBacheche().get((Titolo) itemSelezionato);
+        } else {
+            bachecaDaMostrare = controller.getBachecaCondivisi();
+            isSharedView = true;
+        }
+
+        if (bachecaDaMostrare != null) {
+            descrizioneLabel.setText(" " + bachecaDaMostrare.getDescrizione());
+            todoListModel.clear();
+            for (ToDo t : bachecaDaMostrare.getToDos()) {
+                todoListModel.addElement(t);
             }
         } else {
             descrizioneLabel.setText("Nessuna bacheca selezionata.");
             todoListModel.clear();
         }
+
+        addToDoButton.setEnabled(!isSharedView);
+        removeToDoButton.setEnabled(!isSharedView);
+        spostaToDoButton.setEnabled(!isSharedView);
+        modificaDescrizioneBachecaButton.setEnabled(!isSharedView);
+        modifyToDoButton.setEnabled(!isSharedView);
     }
 
     private void aggiungiToDo(ActionEvent e) {
+        Titolo bachecaSelezionata = (Titolo) bachecaSelector.getSelectedItem();
+
         JTextField titoloField = new JTextField();
         JTextField descrizioneField = new JTextField();
         JTextField dataScadenzaField = new JTextField(10);
         JCheckBox completatoCheckBox = new JCheckBox("Completato");
         JComboBox<NamedColor> colorSelector = new JComboBox<>(predefinedColors);
-        JPanel colorPreviewPanel = new JPanel();
-        colorPreviewPanel.setBackground(predefinedColors[0].getColor());
-        colorPreviewPanel.setPreferredSize(new Dimension(20, 20));
-        colorSelector.addActionListener(ev -> {
-            NamedColor selected = (NamedColor) colorSelector.getSelectedItem();
-            if (selected != null) colorPreviewPanel.setBackground(selected.getColor());
-        });
 
-        JPanel panel = new JPanel(new GridLayout(0, 1));
+        JButton scegliImmagineButton = new JButton("Scegli Immagine...");
+        JLabel percorsoImmagineLabel = new JLabel("Nessuna immagine.");
+        final byte[][] immagineData = {null};
+
+        JPanel panel = new JPanel(new GridLayout(0, 1, 5, 5));
         panel.add(new JLabel("Titolo:")); panel.add(titoloField);
         panel.add(new JLabel("Descrizione:")); panel.add(descrizioneField);
         panel.add(new JLabel("Data Scadenza (gg/mm/aaaa):")); panel.add(dataScadenzaField);
         panel.add(completatoCheckBox);
+
         JPanel colorPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        colorPanel.add(new JLabel("Colore:")); colorPanel.add(colorSelector); colorPanel.add(colorPreviewPanel);
+        colorPanel.add(new JLabel("Colore:")); colorPanel.add(colorSelector);
         panel.add(colorPanel);
+
+        JPanel immaginePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        immaginePanel.add(scegliImmagineButton);
+        immaginePanel.add(percorsoImmagineLabel);
+        panel.add(immaginePanel);
+
+        scegliImmagineButton.addActionListener(ae -> {
+            JFileChooser fileChooser = new JFileChooser();
+            if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+                File file = fileChooser.getSelectedFile();
+                percorsoImmagineLabel.setText(file.getName());
+                try {
+                    immagineData[0] = Files.readAllBytes(file.toPath());
+                } catch (IOException ioException) {
+                    JOptionPane.showMessageDialog(this, "Errore nella lettura del file.", "Errore", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
 
         int result = JOptionPane.showConfirmDialog(this, panel, "Nuovo ToDo", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
         if (result == JOptionPane.OK_OPTION) {
-            Titolo selezionato = (Titolo) bachecaSelector.getSelectedItem();
-            if (selezionato != null && controller.getUtenteCorrente() != null) {
-                String dataInput = dataScadenzaField.getText().trim();
-                LocalDate scadenza = LocalDate.now().plusDays(7);
-                try {
-                    if (!dataInput.isEmpty()) scadenza = LocalDate.parse(dataInput, dateFormatter);
-                } catch (DateTimeParseException ex) {
-                    JOptionPane.showMessageDialog(this, "Formato data non valido. Verrà usata una data predefinita.", "Errore Data", JOptionPane.ERROR_MESSAGE);
+            LocalDate scadenza = LocalDate.now().plusDays(7);
+            try {
+                if (!dataScadenzaField.getText().trim().isEmpty()) {
+                    scadenza = LocalDate.parse(dataScadenzaField.getText().trim(), dateFormatter);
                 }
-
-                ToDo nuovo = new ToDo(
-                        titoloField.getText(),
-                        descrizioneField.getText(),
-                        scadenza,
-                        completatoCheckBox.isSelected(),
-                        "http://example.com",
-                        ((NamedColor) colorSelector.getSelectedItem()).getColor(),
-                        selezionato,
-                        controller.getUtenteCorrente().getEmail()
-                );
-                controller.aggiungiToDo(selezionato, nuovo);
-                aggiornaVistaCompletaBacheca();
-            } else {
-                JOptionPane.showMessageDialog(this, "Errore: Seleziona una bacheca.", "Errore", JOptionPane.ERROR_MESSAGE);
+            } catch (DateTimeParseException ex) {
+                JOptionPane.showMessageDialog(this, "Formato data non valido. Verrà usata una data predefinita.", "Errore Data", JOptionPane.WARNING_MESSAGE);
             }
+
+            ToDo nuovo = new ToDo(
+                    titoloField.getText(),
+                    descrizioneField.getText(),
+                    scadenza,
+                    completatoCheckBox.isSelected(),
+                    "http://example.com",
+                    ((NamedColor) colorSelector.getSelectedItem()).getColor(),
+                    immagineData[0],
+                    bachecaSelezionata,
+                    controller.getUtenteCorrente().getEmail()
+            );
+            controller.aggiungiToDo(bachecaSelezionata, nuovo);
+            aggiornaVistaCompletaBacheca();
         }
     }
 
@@ -244,20 +274,44 @@ public class View extends JFrame {
         JComboBox<NamedColor> colorSelectorModify = new JComboBox<>(predefinedColors);
         colorSelectorModify.setSelectedItem(NamedColor.findNamedColor(toDoDaModificare.getColore()));
 
-        JPanel panel = new JPanel(new GridLayout(0, 1));
+        JButton scegliImmagineButton = new JButton("Cambia Immagine...");
+        JLabel percorsoImmagineLabel = new JLabel(toDoDaModificare.getImmagine() != null ? "Immagine presente" : "Nessuna immagine.");
+        final byte[][] immagineData = {toDoDaModificare.getImmagine()};
+
+        JPanel panel = new JPanel(new GridLayout(0, 1, 5, 5));
         panel.add(new JLabel("Titolo:")); panel.add(titoloField);
         panel.add(new JLabel("Descrizione:")); panel.add(descrizioneField);
         panel.add(new JLabel("Data Scadenza (gg/mm/aaaa):")); panel.add(dataScadenzaField);
         panel.add(completatoCheckBox);
         panel.add(new JLabel("Colore:")); panel.add(colorSelectorModify);
 
+        JPanel immaginePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        immaginePanel.add(scegliImmagineButton);
+        immaginePanel.add(percorsoImmagineLabel);
+        panel.add(immaginePanel);
+
+        scegliImmagineButton.addActionListener(ae -> {
+            JFileChooser fileChooser = new JFileChooser();
+            if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+                File file = fileChooser.getSelectedFile();
+                percorsoImmagineLabel.setText(file.getName());
+                try {
+                    immagineData[0] = Files.readAllBytes(file.toPath());
+                } catch (IOException ioException) {
+                    JOptionPane.showMessageDialog(this, "Errore nella lettura del file.", "Errore", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+
         int result = JOptionPane.showConfirmDialog(this, panel, "Modifica ToDo", JOptionPane.OK_CANCEL_OPTION);
         if (result == JOptionPane.OK_OPTION) {
             LocalDate nuovaScadenza = toDoDaModificare.getScadenza();
             try {
-                if (!dataScadenzaField.getText().trim().isEmpty()) nuovaScadenza = LocalDate.parse(dataScadenzaField.getText().trim(), dateFormatter);
+                if (!dataScadenzaField.getText().trim().isEmpty()) {
+                    nuovaScadenza = LocalDate.parse(dataScadenzaField.getText().trim(), dateFormatter);
+                }
             } catch (DateTimeParseException ex) {
-                JOptionPane.showMessageDialog(this, "Formato data non valido. La data non sarà modificata.", "Errore Data", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Formato data non valido. La data non sarà modificata.", "Errore Data", JOptionPane.WARNING_MESSAGE);
             }
 
             controller.modificaToDo(
@@ -267,9 +321,30 @@ public class View extends JFrame {
                     descrizioneField.getText(),
                     nuovaScadenza,
                     completatoCheckBox.isSelected(),
-                    ((NamedColor)colorSelectorModify.getSelectedItem()).getColor()
+                    ((NamedColor)colorSelectorModify.getSelectedItem()).getColor(),
+                    immagineData[0]
             );
             aggiornaVistaCompletaBacheca();
+        }
+    }
+
+    private void condividiToDoSelezionato(ActionEvent e) {
+        ToDo toDoSelezionato = todoList.getSelectedValue();
+
+        if (toDoSelezionato == null) {
+            JOptionPane.showMessageDialog(this, "Seleziona un ToDo da condividere.", "Attenzione", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        if (!toDoSelezionato.getAutoreEmail().equals(controller.getUtenteCorrente().getEmail())) {
+            JOptionPane.showMessageDialog(this, "Non puoi condividere un ToDo che non hai creato tu.", "Azione non permessa", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        String emailDaCondividere = JOptionPane.showInputDialog(this, "Inserisci l'email dell'utente con cui condividere:");
+
+        if (emailDaCondividere != null && !emailDaCondividere.trim().isEmpty()) {
+            controller.condividiToDo(toDoSelezionato, emailDaCondividere.trim());
         }
     }
 
@@ -311,8 +386,11 @@ public class View extends JFrame {
     }
 
     private void modificaDescrizioneBachecaSelezionata(ActionEvent e) {
-        Titolo bachecaSelezionata = (Titolo) bachecaSelector.getSelectedItem();
-        if (bachecaSelezionata == null) return;
+        Object selectedItem = bachecaSelector.getSelectedItem();
+        if (!(selectedItem instanceof Titolo)) {
+            return;
+        }
+        Titolo bachecaSelezionata = (Titolo) selectedItem;
 
         Bacheca bachecaCorrente = controller.getBacheche().get(bachecaSelezionata);
         String descrizioneAttuale = bachecaCorrente.getDescrizione();

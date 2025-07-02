@@ -54,7 +54,10 @@ public class Bacheca {
 
     @Override
     public String toString() {
-        // È utile per le JComboBox restituire il nome
+        // CORREZIONE: Gestisce il caso in cui il titolo è null (per la bacheca condivisa)
+        if (titolo == null) {
+            return "Bacheca Condivisa";
+        }
         return titolo.name();
     }
 }

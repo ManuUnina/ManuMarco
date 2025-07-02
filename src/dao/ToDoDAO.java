@@ -11,16 +11,20 @@ import java.util.List;
 
 public class ToDoDAO {
 
-    public List<ToDo> findByBacheca(Titolo bachecaTitolo) {
+    private final ListaUtentiDAO listaUtentiDAO = new ListaUtentiDAO();
+
+    public List<ToDo> findByBacheca(Titolo bachecaTitolo, String utenteEmail) {
         List<ToDo> toDos = new ArrayList<>();
-        String sql = "SELECT * FROM todo WHERE bacheca_titolo = ?";
+        String sql = "SELECT * FROM todo WHERE bacheca_titolo = ? AND autore_email = ?";
         try (Connection conn = ConnectionFactory.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setObject(1, bachecaTitolo, java.sql.Types.OTHER);
+            pstmt.setString(2, utenteEmail);
             ResultSet rs = pstmt.executeQuery();
 
             while (rs.next()) {
+                String autoreEmail = rs.getString("autore_email");
                 ToDo todo = new ToDo(
                         rs.getString("titolo"),
                         rs.getString("descrizione"),
@@ -28,10 +32,13 @@ public class ToDoDAO {
                         rs.getBoolean("stato"),
                         rs.getString("url"),
                         Color.decode(rs.getString("colore")),
+                        rs.getBytes("immagine"),
                         Titolo.valueOf(rs.getString("bacheca_titolo")),
-                        rs.getString("autore_email")
+                        autoreEmail
                 );
                 todo.setId(rs.getInt("id"));
+
+                todo.setListaUtenti(listaUtentiDAO.getSharedUsersForToDo(todo.getId(), autoreEmail));
                 toDos.add(todo);
             }
         } catch (SQLException e) {
@@ -41,7 +48,7 @@ public class ToDoDAO {
     }
 
     public void save(ToDo todo) {
-        String sql = "INSERT INTO todo (titolo, descrizione, scadenza, stato, url, colore, bacheca_titolo, autore_email) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO todo (titolo, descrizione, scadenza, stato, url, colore, immagine, bacheca_titolo, autore_email) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = ConnectionFactory.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
@@ -51,14 +58,19 @@ public class ToDoDAO {
             pstmt.setBoolean(4, todo.getStato());
             pstmt.setString(5, todo.getUrl());
             pstmt.setString(6, String.format("#%06X", todo.getColore().getRGB() & 0xFFFFFF));
-            pstmt.setObject(7, todo.getBachecaTitolo(), java.sql.Types.OTHER);
-            pstmt.setString(8, todo.getAutoreEmail());
+            pstmt.setBytes(7, todo.getImmagine());
+            pstmt.setObject(8, todo.getBachecaTitolo(), java.sql.Types.OTHER);
+            pstmt.setString(9, todo.getAutoreEmail());
 
             pstmt.executeUpdate();
 
             ResultSet generatedKeys = pstmt.getGeneratedKeys();
-            if(generatedKeys.next()){
+            if (generatedKeys.next()) {
                 todo.setId(generatedKeys.getInt(1));
+            }
+
+            for (String email : todo.getListaUtenti().getLista()) {
+                listaUtentiDAO.addUserToSharedList(todo.getId(), email);
             }
 
         } catch (SQLException e) {
@@ -67,7 +79,7 @@ public class ToDoDAO {
     }
 
     public void update(ToDo todo){
-        String sql = "UPDATE todo SET titolo = ?, descrizione = ?, scadenza = ?, stato = ?, url = ?, colore = ?, bacheca_titolo = ? WHERE id = ?";
+        String sql = "UPDATE todo SET titolo = ?, descrizione = ?, scadenza = ?, stato = ?, url = ?, colore = ?, immagine = ?, bacheca_titolo = ? WHERE id = ?";
         try (Connection conn = ConnectionFactory.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
@@ -77,8 +89,9 @@ public class ToDoDAO {
             pstmt.setBoolean(4, todo.getStato());
             pstmt.setString(5, todo.getUrl());
             pstmt.setString(6, String.format("#%06X", todo.getColore().getRGB() & 0xFFFFFF));
-            pstmt.setObject(7, todo.getBachecaTitolo(), java.sql.Types.OTHER);
-            pstmt.setInt(8, todo.getId());
+            pstmt.setBytes(7, todo.getImmagine());
+            pstmt.setObject(8, todo.getBachecaTitolo(), java.sql.Types.OTHER);
+            pstmt.setInt(9, todo.getId());
 
             pstmt.executeUpdate();
 
@@ -96,5 +109,35 @@ public class ToDoDAO {
         } catch (SQLException e) {
             e.printStackTrace();
         }
+    }
+
+    public List<ToDo> findSharedWithUser(String userEmail) {
+        List<ToDo> toDos = new ArrayList<>();
+        String sql = "SELECT t.* FROM todo t JOIN todo_utenti_condivisi s ON t.id = s.todo_id WHERE s.utente_email = ?";
+        try (Connection conn = ConnectionFactory.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, userEmail);
+            ResultSet rs = pstmt.executeQuery();
+            while (rs.next()) {
+                String autoreEmail = rs.getString("autore_email");
+                ToDo todo = new ToDo(
+                        rs.getString("titolo"),
+                        rs.getString("descrizione"),
+                        rs.getDate("scadenza").toLocalDate(),
+                        rs.getBoolean("stato"),
+                        rs.getString("url"),
+                        Color.decode(rs.getString("colore")),
+                        rs.getBytes("immagine"),
+                        Titolo.valueOf(rs.getString("bacheca_titolo")),
+                        autoreEmail
+                );
+                todo.setId(rs.getInt("id"));
+                todo.setListaUtenti(listaUtentiDAO.getSharedUsersForToDo(todo.getId(), autoreEmail));
+                toDos.add(todo);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return toDos;
     }
 }

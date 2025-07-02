@@ -1,32 +1,32 @@
 package org.ToDo;
 
 import java.awt.Color;
-import java.sql.Blob;
 import java.time.LocalDate;
 import java.util.ArrayList;
 
 public class ToDo {
-    private int id; // Aggiunto per l'identificativo del DB
+    private int id;
     private String titolo;
     private String descrizione;
     private LocalDate scadenza;
     private Boolean stato;
     private String url;
     private Color colore;
+    private byte[] immagine;
     private Titolo bachecaTitolo;
-    private String autoreEmail;
-    // La lista utenti condivisi può essere gestita separatamente nel DAO
-    // o caricata qui se necessario.
+    private ListaUtenti listaUtenti; // SOSTITUITO autoreEmail con un oggetto ListaUtenti
 
-    public ToDo(String titolo, String descrizione, LocalDate scadenza, Boolean stato, String url, Color colore, Titolo bachecaTitolo, String autoreEmail) {
+    public ToDo(String titolo, String descrizione, LocalDate scadenza, Boolean stato, String url, Color colore, byte[] immagine, Titolo bachecaTitolo, String autoreEmail) {
         this.titolo = titolo;
         this.descrizione = descrizione;
         this.scadenza = scadenza;
         this.stato = stato;
         this.url = url;
         this.colore = colore;
+        this.immagine = immagine;
         this.bachecaTitolo = bachecaTitolo;
-        this.autoreEmail = autoreEmail;
+        // Quando un ToDo viene creato, la sua lista di condivisione è inizialmente vuota
+        this.listaUtenti = new ListaUtenti(autoreEmail, new ArrayList<>());
     }
 
     // Getters
@@ -37,8 +37,14 @@ public class ToDo {
     public Boolean getStato() { return stato; }
     public String getUrl() { return url; }
     public Color getColore() { return colore; }
+    public byte[] getImmagine() { return immagine; }
     public Titolo getBachecaTitolo() { return bachecaTitolo; }
-    public String getAutoreEmail() { return autoreEmail; }
+    public ListaUtenti getListaUtenti() { return listaUtenti; }
+
+    // Metodo di convenienza per ottenere facilmente l'autore
+    public String getAutoreEmail() {
+        return (listaUtenti != null) ? listaUtenti.getAutore() : null;
+    }
 
     // Setters
     public void setId(int id) { this.id = id; }
@@ -48,6 +54,7 @@ public class ToDo {
     public void setStato(Boolean stato) { this.stato = stato; }
     public void setUrl(String url) { this.url = url; }
     public void setColore(Color colore) { this.colore = colore; }
+    public void setImmagine(byte[] immagine) { this.immagine = immagine; }
     public void setBachecaTitolo(Titolo bachecaTitolo) { this.bachecaTitolo = bachecaTitolo; }
-    public void setAutoreEmail(String autoreEmail) { this.autoreEmail = autoreEmail; }
+    public void setListaUtenti(ListaUtenti listaUtenti) { this.listaUtenti = listaUtenti; }
 }
