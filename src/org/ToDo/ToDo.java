@@ -11,21 +11,22 @@ public class ToDo {
     private LocalDate scadenza;
     private Boolean stato;
     private String url;
+    private String posizione; // Aggiunto
     private Color colore;
     private byte[] immagine;
     private Titolo bachecaTitolo;
-    private ListaUtenti listaUtenti; // SOSTITUITO autoreEmail con un oggetto ListaUtenti
+    private ListaUtenti listaUtenti;
 
-    public ToDo(String titolo, String descrizione, LocalDate scadenza, Boolean stato, String url, Color colore, byte[] immagine, Titolo bachecaTitolo, String autoreEmail) {
+    public ToDo(String titolo, String descrizione, LocalDate scadenza, Boolean stato, String url, String posizione, Color colore, byte[] immagine, Titolo bachecaTitolo, String autoreEmail) {
         this.titolo = titolo;
         this.descrizione = descrizione;
         this.scadenza = scadenza;
         this.stato = stato;
         this.url = url;
+        this.posizione = posizione; // Aggiunto
         this.colore = colore;
         this.immagine = immagine;
         this.bachecaTitolo = bachecaTitolo;
-        // Quando un ToDo viene creato, la sua lista di condivisione è inizialmente vuota
         this.listaUtenti = new ListaUtenti(autoreEmail, new ArrayList<>());
     }
 
@@ -36,12 +37,12 @@ public class ToDo {
     public LocalDate getScadenza() { return scadenza; }
     public Boolean getStato() { return stato; }
     public String getUrl() { return url; }
+    public String getPosizione() { return posizione; } // Aggiunto
     public Color getColore() { return colore; }
     public byte[] getImmagine() { return immagine; }
     public Titolo getBachecaTitolo() { return bachecaTitolo; }
     public ListaUtenti getListaUtenti() { return listaUtenti; }
 
-    // Metodo di convenienza per ottenere facilmente l'autore
     public String getAutoreEmail() {
         return (listaUtenti != null) ? listaUtenti.getAutore() : null;
     }
@@ -53,6 +54,7 @@ public class ToDo {
     public void setScadenza(LocalDate scadenza) { this.scadenza = scadenza; }
     public void setStato(Boolean stato) { this.stato = stato; }
     public void setUrl(String url) { this.url = url; }
+    public void setPosizione(String posizione) { this.posizione = posizione; } // Aggiunto
     public void setColore(Color colore) { this.colore = colore; }
     public void setImmagine(byte[] immagine) { this.immagine = immagine; }
     public void setBachecaTitolo(Titolo bachecaTitolo) { this.bachecaTitolo = bachecaTitolo; }

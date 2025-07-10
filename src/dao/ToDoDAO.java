@@ -31,6 +31,7 @@ public class ToDoDAO {
                         rs.getDate("scadenza").toLocalDate(),
                         rs.getBoolean("stato"),
                         rs.getString("url"),
+                        rs.getString("posizione"), // CORREZIONE: Aggiunto campo mancante
                         Color.decode(rs.getString("colore")),
                         rs.getBytes("immagine"),
                         Titolo.valueOf(rs.getString("bacheca_titolo")),
@@ -48,7 +49,7 @@ public class ToDoDAO {
     }
 
     public void save(ToDo todo) {
-        String sql = "INSERT INTO todo (titolo, descrizione, scadenza, stato, url, colore, immagine, bacheca_titolo, autore_email) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO todo (titolo, descrizione, scadenza, stato, url, colore, immagine, bacheca_titolo, autore_email, posizione) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = ConnectionFactory.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
@@ -61,6 +62,7 @@ public class ToDoDAO {
             pstmt.setBytes(7, todo.getImmagine());
             pstmt.setObject(8, todo.getBachecaTitolo(), java.sql.Types.OTHER);
             pstmt.setString(9, todo.getAutoreEmail());
+            pstmt.setString(10, todo.getPosizione()); // CORREZIONE: Aggiunto campo
 
             pstmt.executeUpdate();
 
@@ -79,7 +81,7 @@ public class ToDoDAO {
     }
 
     public void update(ToDo todo){
-        String sql = "UPDATE todo SET titolo = ?, descrizione = ?, scadenza = ?, stato = ?, url = ?, colore = ?, immagine = ?, bacheca_titolo = ? WHERE id = ?";
+        String sql = "UPDATE todo SET titolo = ?, descrizione = ?, scadenza = ?, stato = ?, url = ?, colore = ?, immagine = ?, bacheca_titolo = ?, posizione = ? WHERE id = ?";
         try (Connection conn = ConnectionFactory.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
@@ -91,7 +93,8 @@ public class ToDoDAO {
             pstmt.setString(6, String.format("#%06X", todo.getColore().getRGB() & 0xFFFFFF));
             pstmt.setBytes(7, todo.getImmagine());
             pstmt.setObject(8, todo.getBachecaTitolo(), java.sql.Types.OTHER);
-            pstmt.setInt(9, todo.getId());
+            pstmt.setString(9, todo.getPosizione()); // CORREZIONE: Aggiunto campo
+            pstmt.setInt(10, todo.getId());
 
             pstmt.executeUpdate();
 
@@ -126,6 +129,7 @@ public class ToDoDAO {
                         rs.getDate("scadenza").toLocalDate(),
                         rs.getBoolean("stato"),
                         rs.getString("url"),
+                        rs.getString("posizione"), // CORREZIONE: Aggiunto campo mancante
                         Color.decode(rs.getString("colore")),
                         rs.getBytes("immagine"),
                         Titolo.valueOf(rs.getString("bacheca_titolo")),

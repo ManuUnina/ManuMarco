@@ -38,6 +38,7 @@ CREATE TABLE todo (
                       url VARCHAR(255),
                       colore VARCHAR(7), -- Per memorizzare il colore in formato esadecimale (es. '#FFFFFF')
                       immagine BYTEA,    -- NUOVA COLONNA per i dati binari dell'immagine
+                      posizione VARCHAR(255), -- NUOVA COLONNA aggiunta per la posizione
     -- Chiavi esterne
                       bacheca_titolo titolo_bacheca NOT NULL,
                       autore_email VARCHAR(255) NOT NULL,

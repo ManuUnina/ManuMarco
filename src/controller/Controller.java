@@ -38,12 +38,11 @@ public class Controller {
 
             if (autenticazioneRiuscita) {
                 popolaDatiUtente();
-                // Assicura che la GUI sia creata sul thread di dispatch degli eventi
                 SwingUtilities.invokeLater(() -> {
                     view = new View(this);
                     view.setVisible(true);
                 });
-                return; // Esce dal loop una volta che la GUI è stata avviata
+                return;
             } else {
                 int sceltaUscita = JOptionPane.showConfirmDialog(null, "Accesso non completato. Desideri uscire?", "Esci o Riprova?", JOptionPane.YES_NO_OPTION);
                 if (sceltaUscita == JOptionPane.YES_OPTION) {
@@ -55,7 +54,6 @@ public class Controller {
     }
 
     private void popolaDatiUtente() {
-        // CORREZIONE: Usa 'this.utenteCorrente' per evitare problemi di scope.
         this.bacheche = bachecaDAO.findAllForUser(this.utenteCorrente.getEmail());
 
         if (this.bacheche.isEmpty()) {
@@ -158,45 +156,58 @@ public class Controller {
     public void aggiungiToDo(Titolo titolo, ToDo todo) {
         toDoDAO.save(todo);
         this.bacheche.get(titolo).aggiungiToDo(todo);
+        view.refreshToDoList();
     }
 
-    public void rimuoviToDo(Titolo titolo, int index) {
+    public void rimuoviToDo(Titolo titolo, ToDo todo) {
         Bacheca bacheca = this.bacheche.get(titolo);
-        if (bacheca != null && index >= 0 && index < bacheca.getToDos().size()) {
-            int todoId = bacheca.getToDos().get(index).getId();
-            toDoDAO.delete(todoId);
-            bacheca.rimuoviToDo(index);
+        if (bacheca != null) {
+            toDoDAO.delete(todo.getId());
+            bacheca.getToDos().remove(todo);
+            view.refreshToDoList();
         }
     }
+
+    public void toggleToDoStatus(Titolo bachecaTitolo, ToDo todoToToggle, boolean newStatus) {
+        if (todoToToggle != null) {
+            todoToToggle.setStato(newStatus);
+            toDoDAO.update(todoToToggle);
+            view.refreshToDoList();
+        }
+    }
+
 
     public void modificaDescrizioneBacheca(Titolo titoloBacheca, String nuovaDescrizione) {
         bachecaDAO.updateDescrizione(titoloBacheca, nuovaDescrizione, this.utenteCorrente.getEmail());
         this.bacheche.get(titoloBacheca).setDescrizione(nuovaDescrizione);
+        view.refreshToDoList();
     }
 
-    public void modificaToDo(Titolo titoloBacheca, int todoIndex, String nuovoTitolo, String nuovaDescrizione, LocalDate nuovaScadenza, boolean nuovoStato, Color nuovoColore, byte[] nuovaImmagine) {
+    public void modificaToDo(Titolo titoloBacheca, ToDo toDoDaModificare, String nuovoTitolo, String nuovaDescrizione, LocalDate nuovaScadenza, boolean nuovoStato, Color nuovoColore, String nuovoUrl, String nuovaPosizione, byte[] nuovaImmagine) {
         Bacheca bacheca = this.bacheche.get(titoloBacheca);
-        if (bacheca != null && todoIndex >= 0 && todoIndex < bacheca.getToDos().size()) {
-            ToDo toDoDaModificare = bacheca.getToDos().get(todoIndex);
+        if (bacheca != null && toDoDaModificare != null) {
             toDoDaModificare.setTitolo(nuovoTitolo);
             toDoDaModificare.setDescrizione(nuovaDescrizione);
             toDoDaModificare.setScadenza(nuovaScadenza);
             toDoDaModificare.setStato(nuovoStato);
             toDoDaModificare.setColore(nuovoColore);
+            toDoDaModificare.setUrl(nuovoUrl);
+            toDoDaModificare.setPosizione(nuovaPosizione);
             toDoDaModificare.setImmagine(nuovaImmagine);
             toDoDAO.update(toDoDaModificare);
+            view.refreshToDoList();
         }
     }
 
-    public void spostaToDoGUI(Titolo bachecaOrigineTitolo, int todoIndex, Titolo bachecaDestinazioneTitolo) {
+    public void spostaToDoGUI(Titolo bachecaOrigineTitolo, ToDo toDoDaSpostare, Titolo bachecaDestinazioneTitolo) {
         Bacheca bachecaOrigine = this.bacheche.get(bachecaOrigineTitolo);
-        if (bachecaOrigine != null && todoIndex >= 0 && todoIndex < bachecaOrigine.getToDos().size()) {
-            ToDo toDoDaSpostare = bachecaOrigine.getToDos().get(todoIndex);
+        if (bachecaOrigine != null && toDoDaSpostare != null) {
             toDoDaSpostare.setBachecaTitolo(bachecaDestinazioneTitolo);
             toDoDAO.update(toDoDaSpostare);
 
-            bachecaOrigine.getToDos().remove(todoIndex);
+            bachecaOrigine.getToDos().remove(toDoDaSpostare);
             this.bacheche.get(bachecaDestinazioneTitolo).aggiungiToDo(toDoDaSpostare);
+            view.refreshToDoList();
         }
     }
 
@@ -215,5 +226,6 @@ public class Controller {
         listaUtentiDAO.addUserToSharedList(todo.getId(), emailToShareWith);
 
         JOptionPane.showMessageDialog(null, "ToDo condiviso con successo con " + emailToShareWith, "Condivisione Riuscita", JOptionPane.INFORMATION_MESSAGE);
+        view.refreshToDoList();
     }
 }
