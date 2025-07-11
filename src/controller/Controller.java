@@ -5,6 +5,7 @@ import dao.ListaUtentiDAO;
 import dao.ToDoDAO;
 import dao.UtenteDAO;
 import org.ToDo.Bacheca;
+import org.ToDo.ListaUtenti;
 import org.ToDo.Titolo;
 import org.ToDo.ToDo;
 import org.ToDo.Utente;
@@ -24,12 +25,13 @@ public class Controller {
     private final ToDoDAO toDoDAO;
     private final ListaUtentiDAO listaUtentiDAO;
     private Utente utenteCorrente;
+    private ListaUtenti contatti;
 
     public Controller() {
         this.utenteDAO = new UtenteDAO();
         this.bachecaDAO = new BachecaDAO();
         this.toDoDAO = new ToDoDAO();
-        this.listaUtentiDAO = new ListaUtentiDAO();
+        this.listaUtentiDAO = new ListaUtentiDAO(); // Unico DAO per le liste
     }
 
     public void init() {
@@ -70,6 +72,9 @@ public class Controller {
 
         this.bachecaCondivisi = new Bacheca(null, "ToDo condivisi da altri utenti", this.utenteCorrente.getEmail());
         this.bachecaCondivisi.setToDos(toDoDAO.findSharedWithUser(this.utenteCorrente.getEmail()));
+
+        // Caricamento contatti utente tramite ListaUtentiDAO
+        this.contatti = listaUtentiDAO.getContattiForUser(this.utenteCorrente.getEmail());
     }
 
     private boolean gestisciAutenticazione() {
@@ -152,6 +157,33 @@ public class Controller {
     public Utente getUtenteCorrente() { return this.utenteCorrente; }
     public Map<Titolo, Bacheca> getBacheche() { return this.bacheche; }
     public Bacheca getBachecaCondivisi() { return this.bachecaCondivisi; }
+    public ListaUtenti getContatti() { return this.contatti; }
+
+    public void aggiungiContatto(String email) {
+        if (!utenteDAO.isEmailRegistered(email)) {
+            JOptionPane.showMessageDialog(null, "Nessun utente registrato con l'email: " + email, "Errore", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        if (utenteCorrente.getEmail().equals(email)) {
+            JOptionPane.showMessageDialog(null, "Non puoi aggiungere te stesso ai contatti.", "Info", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        if (contatti.getLista().contains(email)) {
+            JOptionPane.showMessageDialog(null, "Questo utente è già nei tuoi contatti.", "Info", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        listaUtentiDAO.aggiungiContatto(utenteCorrente.getEmail(), email);
+        contatti.aggiungiUtente(email);
+        JOptionPane.showMessageDialog(null, "Contatto aggiunto con successo.", "Successo", JOptionPane.INFORMATION_MESSAGE);
+        view.refreshContatti();
+    }
+
+    public void rimuoviContatto(String email) {
+        listaUtentiDAO.rimuoviContatto(utenteCorrente.getEmail(), email);
+        contatti.rimuovi(email);
+        JOptionPane.showMessageDialog(null, "Contatto rimosso con successo.", "Successo", JOptionPane.INFORMATION_MESSAGE);
+        view.refreshContatti();
+    }
 
     public void aggiungiToDo(Titolo titolo, ToDo todo) {
         toDoDAO.save(todo);

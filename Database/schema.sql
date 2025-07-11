@@ -1,5 +1,6 @@
 -- Istruzione per eliminare le tabelle esistenti se necessario, per una facile reinizializzazione.
 DROP TABLE IF EXISTS todo_utenti_condivisi;
+DROP TABLE IF EXISTS contatto; -- NUOVA TABELLA
 DROP TABLE IF EXISTS todo;
 DROP TABLE IF EXISTS bacheca;
 DROP TABLE IF EXISTS utente;
@@ -55,6 +56,16 @@ CREATE TABLE todo_utenti_condivisi (
                                        FOREIGN KEY (todo_id) REFERENCES todo(id) ON DELETE CASCADE,
                                        FOREIGN KEY (utente_email) REFERENCES utente(email) ON DELETE CASCADE
 );
+
+-- NUOVA TABELLA PER I CONTATTI
+CREATE TABLE contatto (
+                          utente_email VARCHAR(255) NOT NULL,
+                          contatto_email VARCHAR(255) NOT NULL,
+                          PRIMARY KEY (utente_email, contatto_email),
+                          FOREIGN KEY (utente_email) REFERENCES utente(email) ON DELETE CASCADE,
+                          FOREIGN KEY (contatto_email) REFERENCES utente(email) ON DELETE CASCADE
+);
+
 
 -- Popolamento iniziale
 INSERT INTO utente (email, password) VALUES ('test@example.com', 'password123');

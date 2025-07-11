@@ -9,45 +9,27 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 
-/**
- * DAO per la gestione della persistenza delle condivisioni (classe ListaUtenti).
- * Si occupa esclusivamente della tabella 'todo_utenti_condivisi'.
- */
 public class ListaUtentiDAO {
 
-    /**
-     * Aggiunge una condivisione di un ToDo con un utente nel database.
-     * @param todoId L'ID del ToDo da condividere.
-     * @param email L'email dell'utente con cui condividere.
-     */
+    // METODI PER LA CONDIVISIONE DEI TODO
+
     public void addUserToSharedList(int todoId, String email) {
-        // "ON CONFLICT DO NOTHING" evita errori se la condivisione esiste già
         String sql = "INSERT INTO todo_utenti_condivisi (todo_id, utente_email) VALUES (?, ?) ON CONFLICT DO NOTHING";
         try (Connection conn = ConnectionFactory.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
             pstmt.setInt(1, todoId);
             pstmt.setString(2, email);
             pstmt.executeUpdate();
-
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
 
-    /**
-     * Recupera dal database la lista di utenti con cui un ToDo è condiviso.
-     * @param todoId L'ID del ToDo.
-     * @param autoreEmail L'email dell'autore originale del ToDo.
-     * @return Un oggetto ListaUtenti popolato con gli utenti condivisi.
-     */
     public ListaUtenti getSharedUsersForToDo(int todoId, String autoreEmail) {
         ArrayList<String> sharedUsers = new ArrayList<>();
         String sql = "SELECT utente_email FROM todo_utenti_condivisi WHERE todo_id = ?";
-
         try (Connection conn = ConnectionFactory.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
             pstmt.setInt(1, todoId);
             ResultSet rs = pstmt.executeQuery();
             while (rs.next()) {
@@ -56,7 +38,48 @@ public class ListaUtentiDAO {
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        // Crea e restituisce l'oggetto ListaUtenti completo
         return new ListaUtenti(autoreEmail, sharedUsers);
+    }
+
+    // METODI PER LA GESTIONE DEI CONTATTI
+
+    public ListaUtenti getContattiForUser(String utenteEmail) {
+        ArrayList<String> contatti = new ArrayList<>();
+        String sql = "SELECT contatto_email FROM contatto WHERE utente_email = ?";
+        try (Connection conn = ConnectionFactory.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, utenteEmail);
+            ResultSet rs = pstmt.executeQuery();
+            while (rs.next()) {
+                contatti.add(rs.getString("contatto_email"));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return new ListaUtenti(utenteEmail, contatti);
+    }
+
+    public void aggiungiContatto(String utenteEmail, String contattoEmail) {
+        String sql = "INSERT INTO contatto (utente_email, contatto_email) VALUES (?, ?) ON CONFLICT DO NOTHING";
+        try (Connection conn = ConnectionFactory.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, utenteEmail);
+            pstmt.setString(2, contattoEmail);
+            pstmt.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void rimuoviContatto(String utenteEmail, String contattoEmail) {
+        String sql = "DELETE FROM contatto WHERE utente_email = ? AND contatto_email = ?";
+        try (Connection conn = ConnectionFactory.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, utenteEmail);
+            pstmt.setString(2, contattoEmail);
+            pstmt.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 }
