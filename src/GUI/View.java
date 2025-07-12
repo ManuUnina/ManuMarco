@@ -20,6 +20,8 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Classe helper per associare un nome a un colore per la JComboBox.
@@ -83,7 +85,7 @@ class NamedColor {
 }
 
 public class View extends JFrame {
-    private final Controller controller;
+    private final transient Controller controller;
 
     private JPanel mainBoardsPanel;
     private JPanel boardSelectionContainer;
@@ -100,11 +102,19 @@ public class View extends JFrame {
 
     private Titolo selectedBoardTitle; // Mantiene traccia della bacheca attualmente selezionata
 
-    private final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    private static final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private final NamedColor[] predefinedColors = NamedColor.getPredefinedColors();
 
     private boolean isTileView = false; // Stato per la visualizzazione a riquadri
     private JToggleButton viewToggleButton; // Pulsante per cambiare vista
+
+    // Logger and Constants
+    private static final Logger LOGGER = Logger.getLogger(View.class.getName());
+    private static final String ERROR_TITLE = "Errore";
+    private static final String MODIFY_BOARD_DESC_TITLE = "Modifica Descrizione Bacheca";
+    private static final String ADD_TODO_BUTTON_TEXT = "<html><span style='font-size:1.2em;'>&#43;</span> Aggiungi ToDo</html>";
+    private static final String SHOW_COMPLETED_CHECKBOX_TEXT = "Mostra ToDo Completati";
+    private static final String MODIFY_DESCRIPTION_BUTTON_TEXT = "Modifica Descrizione";
 
 
     public View(Controller controller) {
@@ -172,13 +182,14 @@ public class View extends JFrame {
         mainSplitPane.setEnabled(false);
         mainSplitPane.setResizeWeight(0.0);
 
-        boardSelectionContainer = new JPanel(new GridLayout(1, 3, 20, 0));
+        boardSelectionContainer = new JPanel(new GridLayout(1, 4, 20, 0)); // Aumentato a 4 per la nuova bacheca
         boardSelectionContainer.setBorder(BorderFactory.createEmptyBorder(50, 50, 50, 50));
         boardSelectionContainer.setBackground(new Color(240, 240, 240));
 
         for (Titolo title : Titolo.values()) {
             boardSelectionContainer.add(createBoardPanel(title));
         }
+        boardSelectionContainer.add(createSharedBoardPanel());
 
         mainBoardsPanel = new JPanel(new GridBagLayout());
         mainBoardsPanel.add(boardSelectionContainer);
@@ -217,6 +228,79 @@ public class View extends JFrame {
         return panel;
     }
 
+    private JPanel createSharedBoardPanel() {
+        JPanel panel = new JPanel(new BorderLayout(10, 10));
+        panel.setBorder(BorderFactory.createLineBorder(Color.ORANGE, 2)); // Bordo evidenziato
+        panel.setBackground(new Color(255, 248, 225)); // Sfondo leggermente diverso
+        panel.setPreferredSize(new Dimension(200, 150));
+
+        JLabel titleLabel = new JLabel("Condivisi con me", SwingConstants.CENTER);
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        panel.add(titleLabel, BorderLayout.CENTER);
+
+        panel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                showSharedToDoList();
+            }
+        });
+        return panel;
+    }
+
+    private void showSharedToDoList() {
+        selectedBoardTitle = null;
+
+        mainSplitPane.setDividerSize(0);
+        mainSplitPane.setEnabled(false);
+        mainSplitPane.setResizeWeight(0.35);
+        mainSplitPane.setDividerLocation(0.35);
+
+        todoListPanel.removeAll();
+        todoListPanel.setLayout(new BorderLayout());
+
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        currentBoardDescriptionLabel = new JLabel("Descrizione: ToDo condivisi da altri utenti");
+        headerPanel.add(currentBoardDescriptionLabel, BorderLayout.NORTH);
+
+        modifyBoardDescriptionButton = new JButton(MODIFY_DESCRIPTION_BUTTON_TEXT);
+        addToDoButton = new JButton(ADD_TODO_BUTTON_TEXT);
+
+        modifyBoardDescriptionButton.setVisible(false);
+        addToDoButton.setVisible(false);
+
+        todoListPanel.add(headerPanel, BorderLayout.NORTH);
+
+        todoListModel = new DefaultListModel<>();
+        todoList = new JList<>(todoListModel);
+        todoList.setCellRenderer(new ToDoCellRenderer());
+        todoList.setFixedCellHeight(30);
+
+        todoList.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                JList<ToDo> list = (JList<ToDo>) e.getSource();
+                int index = list.locationToIndex(e.getPoint());
+
+                if (index != -1) {
+                    ToDo todo = list.getModel().getElementAt(index);
+                    showToDoDetailDialog(todo);
+                }
+            }
+        });
+
+        Bacheca bachecaCondivisi = controller.getBachecaCondivisi();
+        if (bachecaCondivisi != null) {
+            for (ToDo todo : bachecaCondivisi.getToDos()) {
+                todoListModel.addElement(todo);
+            }
+        }
+        todoListPanel.add(new JScrollPane(todoList), BorderLayout.CENTER);
+
+        todoListPanel.revalidate();
+        todoListPanel.repaint();
+    }
+
+
     /**
      * Configura il layout per mostrare la lista dei ToDo della bacheca selezionata.
      */
@@ -238,7 +322,7 @@ public class View extends JFrame {
 
         JPanel headerPanel = new JPanel(new BorderLayout());
         currentBoardDescriptionLabel = new JLabel("Descrizione: " + (selectedBoardTitle != null ? controller.getBacheche().get(selectedBoardTitle).getDescrizione() : "N/D"));
-        modifyBoardDescriptionButton = new JButton("Modifica Descrizione");
+        modifyBoardDescriptionButton = new JButton(MODIFY_DESCRIPTION_BUTTON_TEXT);
         modifyBoardDescriptionButton.addActionListener(this::modificaDescrizioneBachecaSelezionata);
 
         JPanel descriptionPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
@@ -248,7 +332,7 @@ public class View extends JFrame {
         }
         headerPanel.add(descriptionPanel, BorderLayout.NORTH);
 
-        showCompletedCheckBox = new JCheckBox("Mostra ToDo Completati");
+        showCompletedCheckBox = new JCheckBox(SHOW_COMPLETED_CHECKBOX_TEXT);
         showCompletedCheckBox.addActionListener(e -> refreshToDoList());
         headerPanel.add(showCompletedCheckBox, BorderLayout.SOUTH);
 
@@ -272,7 +356,7 @@ public class View extends JFrame {
                         ToDo todo = list.getModel().getElementAt(index);
                         int checkBoxGraphicClickWidth = 25;
                         if (e.getX() - cellBounds.x >= 0 && e.getX() - cellBounds.x < checkBoxGraphicClickWidth) {
-                            controller.toggleToDoStatus(selectedBoardTitle, todo, !todo.getStato());
+                            controller.toggleToDoStatus(selectedBoardTitle, todo, !Boolean.TRUE.equals(todo.getStato()));
                             refreshToDoList(); // Aggiorna la vista dopo il toggle
                         } else {
                             showToDoDetailDialog(todo);
@@ -283,7 +367,7 @@ public class View extends JFrame {
         });
 
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        addToDoButton = new JButton("<html><span style='font-size:1.2em;'>&#43;</span> Aggiungi ToDo</html>"); // Icona "+" Unicode
+        addToDoButton = new JButton(ADD_TODO_BUTTON_TEXT);
         addToDoButton.addActionListener(this::aggiungiToDo);
         buttonPanel.add(addToDoButton);
 
@@ -317,8 +401,8 @@ public class View extends JFrame {
 
         JPanel headerPanel = new JPanel(new BorderLayout());
         currentBoardDescriptionLabel = new JLabel("Descrizione: Tutti i ToDo Incompiuti"); // Titolo specifico per questa vista
-        modifyBoardDescriptionButton = new JButton("Modifica Descrizione"); // Non aggiunto al pannello
-        showCompletedCheckBox = new JCheckBox("Mostra ToDo Completati"); // Non aggiunto al pannello
+        modifyBoardDescriptionButton = new JButton(MODIFY_DESCRIPTION_BUTTON_TEXT); // Non aggiunto al pannello
+        showCompletedCheckBox = new JCheckBox(SHOW_COMPLETED_CHECKBOX_TEXT); // Non aggiunto al pannello
 
         JPanel descriptionPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         descriptionPanel.add(currentBoardDescriptionLabel);
@@ -343,7 +427,7 @@ public class View extends JFrame {
                         ToDo todo = list.getModel().getElementAt(index);
                         int checkBoxGraphicClickWidth = 25;
                         if (e.getX() - cellBounds.x >= 0 && e.getX() - cellBounds.x < checkBoxGraphicClickWidth) {
-                            controller.toggleToDoStatus(null, todo, !todo.getStato()); // TODO: gestire la bacheca di origine
+                            controller.toggleToDoStatus(null, todo, !Boolean.TRUE.equals(todo.getStato()));
                             refreshToDoList(); // Aggiorna la vista dopo il toggle
                         } else {
                             showToDoDetailDialog(todo);
@@ -354,7 +438,7 @@ public class View extends JFrame {
         });
 
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        addToDoButton = new JButton("<html><span style='font-size:1.2em;'>&#43;</span> Aggiungi ToDo</html>");
+        addToDoButton = new JButton(ADD_TODO_BUTTON_TEXT);
         addToDoButton.addActionListener(e -> aggiungiToDoGlobale());
         buttonPanel.add(addToDoButton);
 
@@ -367,53 +451,104 @@ public class View extends JFrame {
     }
 
     /**
-     * Popola la lista con tutti i ToDo non completati da tutte le bacheche.
+     * Aggiorna la lista dei ToDo visualizzati in base alla bacheca selezionata
+     * e allo stato del checkbox "Mostra Completati".
      */
-    private void populateAllIncompleteToDos() {
-        todoListModel.clear(); // Sempre pulisci il modello della JList
-        if (isTileView) {
-            // Se in vista riquadri, popola il pannello dei riquadri
-            // Prima di aggiungere i riquadri, assicurati di rimuovere il JScrollPane o il precedente pannello
-            Component centerComponent = ((BorderLayout)todoListPanel.getLayout()).getLayoutComponent(BorderLayout.CENTER);
-            if (centerComponent instanceof JScrollPane) {
-                todoListPanel.remove(centerComponent);
-            } else if (centerComponent instanceof JPanel) { // Potrebbe essere il cardsPanel se si torna qui
-                todoListPanel.remove(centerComponent);
-            }
+    public void refreshToDoList() {
+        todoListPanel.removeAll();
+        todoListPanel.setLayout(new BorderLayout());
 
+        // Setup Header
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        String descriptionText = (selectedBoardTitle == null)
+                ? "Descrizione: Tutti i ToDo Incompiuti"
+                : "Descrizione: " + controller.getBacheche().get(selectedBoardTitle).getDescrizione();
+        currentBoardDescriptionLabel = new JLabel(descriptionText);
 
-            JPanel cardsPanel = new JPanel(new GridLayout(0, 2, 10, 10)); // 2 colonne per i riquadri
-            cardsPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10)); // Padding per i riquadri
-            for (Bacheca bacheca : controller.getBacheche().values()) {
-                for (ToDo t : bacheca.getToDos()) {
-                    if (!t.getStato()) {
-                        cardsPanel.add(createToDoCard(t));
-                    }
-                }
-            }
-            todoListPanel.add(new JScrollPane(cardsPanel), BorderLayout.CENTER);
-        } else {
-            // Se in vista lista, popola il modello della JList
-            for (Bacheca bacheca : controller.getBacheche().values()) {
-                for (ToDo t : bacheca.getToDos()) {
-                    if (!t.getStato()) {
-                        todoListModel.addElement(t);
-                    }
-                }
-            }
-            // Assicurati che la JList sia visualizzata
-            Component centerComponent = ((BorderLayout)todoListPanel.getLayout()).getLayoutComponent(BorderLayout.CENTER);
-            if (!(centerComponent instanceof JScrollPane && ((JScrollPane)centerComponent).getViewport().getView() == todoList)) {
-                if (centerComponent != null) {
-                    todoListPanel.remove(centerComponent);
-                }
-                todoListPanel.add(new JScrollPane(todoList), BorderLayout.CENTER);
-            }
+        JPanel descriptionPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        descriptionPanel.add(currentBoardDescriptionLabel);
+
+        if (selectedBoardTitle != null) {
+            modifyBoardDescriptionButton = new JButton(MODIFY_DESCRIPTION_BUTTON_TEXT);
+            modifyBoardDescriptionButton.addActionListener(this::modificaDescrizioneBachecaSelezionata);
+            descriptionPanel.add(modifyBoardDescriptionButton);
+
+            showCompletedCheckBox = new JCheckBox(SHOW_COMPLETED_CHECKBOX_TEXT);
+            showCompletedCheckBox.addActionListener(e -> refreshToDoList());
+            headerPanel.add(showCompletedCheckBox, BorderLayout.SOUTH);
         }
+        headerPanel.add(descriptionPanel, BorderLayout.NORTH);
+        todoListPanel.add(headerPanel, BorderLayout.NORTH);
+
+        // Populate content (List or Tiles)
+        if (isTileView) {
+            populateTileView();
+        } else {
+            populateListView();
+        }
+
+        // Setup Footer Buttons
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        addToDoButton = new JButton(ADD_TODO_BUTTON_TEXT);
+        if (selectedBoardTitle == null) {
+            addToDoButton.addActionListener(e -> aggiungiToDoGlobale());
+        } else {
+            addToDoButton.addActionListener(this::aggiungiToDo);
+        }
+        buttonPanel.add(addToDoButton);
+        todoListPanel.add(buttonPanel, BorderLayout.SOUTH);
+
         todoListPanel.revalidate();
         todoListPanel.repaint();
     }
 
+    private void populateTileView() {
+        JPanel cardsContainer = new JPanel(new GridLayout(0, 2, 10, 10));
+        cardsContainer.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        if (selectedBoardTitle == null) { // All incomplete ToDos view
+            for (Bacheca bacheca : controller.getBacheche().values()) {
+                for (ToDo t : bacheca.getToDos()) {
+                    if (!Boolean.TRUE.equals(t.getStato())) {
+                        cardsContainer.add(createToDoCard(t));
+                    }
+                }
+            }
+        } else { // Specific board view
+            Bacheca bacheca = controller.getBacheche().get(selectedBoardTitle);
+            if (bacheca != null) {
+                for (ToDo t : bacheca.getToDos()) {
+                    if (showCompletedCheckBox.isSelected() || !Boolean.TRUE.equals(t.getStato())) {
+                        cardsContainer.add(createToDoCard(t));
+                    }
+                }
+            }
+        }
+        todoListPanel.add(new JScrollPane(cardsContainer), BorderLayout.CENTER);
+    }
+
+    private void populateListView() {
+        todoListModel.clear();
+        if (selectedBoardTitle == null) { // All incomplete ToDos view
+            for (Bacheca bacheca : controller.getBacheche().values()) {
+                for (ToDo t : bacheca.getToDos()) {
+                    if (!Boolean.TRUE.equals(t.getStato())) {
+                        todoListModel.addElement(t);
+                    }
+                }
+            }
+        } else { // Specific board view
+            Bacheca bacheca = controller.getBacheche().get(selectedBoardTitle);
+            if (bacheca != null) {
+                for (ToDo t : bacheca.getToDos()) {
+                    if (showCompletedCheckBox.isSelected() || !Boolean.TRUE.equals(t.getStato())) {
+                        todoListModel.addElement(t);
+                    }
+                }
+            }
+        }
+        todoListPanel.add(new JScrollPane(todoList), BorderLayout.CENTER);
+    }
 
     /**
      * Gestisce l'aggiunta di un nuovo ToDo da una vista globale, permettendo la scelta della bacheca.
@@ -439,7 +574,7 @@ public class View extends JFrame {
      */
     private void showBoardSelectionView() {
         selectedBoardTitle = null;
-        boardSelectionContainer.setLayout(new GridLayout(1, 3, 20, 0));
+        boardSelectionContainer.setLayout(new GridLayout(1, 4, 20, 0)); // Aumentato a 4
         boardSelectionContainer.revalidate();
         boardSelectionContainer.repaint();
 
@@ -449,103 +584,6 @@ public class View extends JFrame {
         mainSplitPane.revalidate();
         mainSplitPane.repaint();
     }
-
-    /**
-     * Aggiorna la lista dei ToDo visualizzati in base alla bacheca selezionata
-     * e allo stato del checkbox "Mostra Completati".
-     */
-    public void refreshToDoList() {
-        todoListPanel.removeAll(); // Pulisce il pannello prima di ridisegnare
-        todoListPanel.setLayout(new BorderLayout()); // Layout per header e lista/riquadri
-
-        JPanel headerPanel = new JPanel(new BorderLayout());
-        // Aggiorna la descrizione in base alla bacheca selezionata o alla vista globale
-        if (selectedBoardTitle == null) {
-            currentBoardDescriptionLabel.setText("Descrizione: Tutti i ToDo Incompiuti");
-        } else {
-            currentBoardDescriptionLabel.setText("Descrizione: " + controller.getBacheche().get(selectedBoardTitle).getDescrizione());
-        }
-
-        JPanel descriptionPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        descriptionPanel.add(currentBoardDescriptionLabel);
-
-        // Controllo per modifyBoardDescriptionButton e showCompletedCheckBox
-        if (selectedBoardTitle != null) {
-            descriptionPanel.add(modifyBoardDescriptionButton);
-            headerPanel.add(showCompletedCheckBox, BorderLayout.SOUTH);
-        } else {
-            // Assicurati che non siano visibili se si è nella vista globale
-            if (modifyBoardDescriptionButton != null) modifyBoardDescriptionButton.setVisible(false);
-            if (showCompletedCheckBox != null) showCompletedCheckBox.setVisible(false);
-        }
-
-        headerPanel.add(descriptionPanel, BorderLayout.NORTH);
-        todoListPanel.add(headerPanel, BorderLayout.NORTH);
-
-        // Logica per cambiare tra vista lista e vista riquadri
-        if (isTileView) {
-            JPanel cardsContainer = new JPanel(new GridLayout(0, 2, 10, 10)); // 2 colonne per i riquadri, spaziatura 10px
-            cardsContainer.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10)); // Padding per i riquadri
-
-            // Popola i riquadri
-            if (selectedBoardTitle == null) { // Tutti i ToDo incompiuti
-                for (Bacheca bacheca : controller.getBacheche().values()) {
-                    for (ToDo t : bacheca.getToDos()) {
-                        if (!t.getStato()) {
-                            cardsContainer.add(createToDoCard(t));
-                        }
-                    }
-                }
-            } else { // ToDo di una bacheca specifica
-                Bacheca bacheca = controller.getBacheche().get(selectedBoardTitle);
-                if (bacheca != null) {
-                    for (ToDo t : bacheca.getToDos()) {
-                        if (showCompletedCheckBox.isSelected() || !t.getStato()) {
-                            cardsContainer.add(createToDoCard(t));
-                        }
-                    }
-                }
-            }
-            todoListPanel.add(new JScrollPane(cardsContainer), BorderLayout.CENTER); // Aggiungi con scroll
-        } else {
-            // Vista lista (esistente)
-            todoListModel.clear(); // Pulisci il modello prima di ripopolarlo
-            if (selectedBoardTitle == null) { // Tutti i ToDo incompiuti
-                for (Bacheca bacheca : controller.getBacheche().values()) {
-                    for (ToDo t : bacheca.getToDos()) {
-                        if (!t.getStato()) {
-                            todoListModel.addElement(t);
-                        }
-                    }
-                }
-            } else { // ToDo di una bacheca specifica
-                Bacheca bacheca = controller.getBacheche().get(selectedBoardTitle);
-                if (bacheca != null) {
-                    for (ToDo t : bacheca.getToDos()) {
-                        if (showCompletedCheckBox.isSelected() || !t.getStato()) {
-                            todoListModel.addElement(t);
-                        }
-                    }
-                }
-            }
-            todoListPanel.add(new JScrollPane(todoList), BorderLayout.CENTER); // Aggiungi la JList con scroll
-        }
-
-        // Pannello bottoni (Aggiungi ToDo)
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        addToDoButton = new JButton("<html><span style='font-size:1.2em;'>&#43;</span> Aggiungi ToDo</html>");
-        if (selectedBoardTitle == null) { // Azione per la vista globale
-            addToDoButton.addActionListener(e -> aggiungiToDoGlobale());
-        } else { // Azione per la bacheca specifica
-            addToDoButton.addActionListener(e -> aggiungiToDo(null));
-        }
-        buttonPanel.add(addToDoButton);
-        todoListPanel.add(buttonPanel, BorderLayout.SOUTH);
-
-        todoListPanel.revalidate();
-        todoListPanel.repaint();
-    }
-
 
     /**
      * Crea un pannello (card) per un singolo ToDo nella visualizzazione a riquadri.
@@ -598,7 +636,7 @@ public class View extends JFrame {
 
 
     /**
-     * Mostra un dialog con i dettagli di un ToDo selezionato.
+     * Mostra un dialog con i dettagli di un ToDo selezionato. (Refactored "Brain Method")
      * @param todo Il ToDo di cui mostrare i dettagli.
      */
     private void showToDoDetailDialog(ToDo todo) {
@@ -608,15 +646,24 @@ public class View extends JFrame {
         detailDialog.setLayout(new BorderLayout(10, 10));
         detailDialog.setResizable(false);
 
+        JPanel infoPanel = createToDoDetailInfoPanel(todo, detailDialog);
+        JPanel buttonPanel = createToDoDetailButtonPanel(todo, detailDialog);
+
+        detailDialog.add(infoPanel, BorderLayout.CENTER);
+        detailDialog.add(buttonPanel, BorderLayout.SOUTH);
+        detailDialog.setVisible(true);
+    }
+
+    private JPanel createToDoDetailInfoPanel(ToDo todo, JDialog parentDialog) {
         JPanel infoPanel = new JPanel(new GridLayout(0, 1, 5, 5));
         infoPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        JLabel titleLabel = new JLabel("<html><b>Titolo:</b> " + todo.getTitolo() + "</html>");
-        JLabel descLabel = new JLabel("<html><b>Descrizione:</b> " + todo.getDescrizione() + "</html>");
-        JLabel authorLabel = new JLabel("<html><b>Autore:</b> " + todo.getListaUtenti().getAutore() + "</html>");
-        JLabel sharedUsersLabel = new JLabel("<html><b>Condiviso con:</b> " + (todo.getListaUtenti().getLista().isEmpty() ? "Nessuno" : String.join(", ", todo.getListaUtenti().getLista())) + "</html>");
-        JLabel statusLabel = new JLabel("<html><b>Stato:</b> " + (todo.getStato() ? "Completato" : "Incompleto") + "</html>");
-        JLabel dueDateLabel = new JLabel("<html><b>Scadenza:</b> " + (todo.getScadenza() != null ? todo.getScadenza().format(dateFormatter) : "N/D") + "</html>");
+        infoPanel.add(new JLabel("<html><b>Titolo:</b> " + todo.getTitolo() + "</html>"));
+        infoPanel.add(new JLabel("<html><b>Descrizione:</b> " + todo.getDescrizione() + "</html>"));
+        infoPanel.add(new JLabel("<html><b>Autore:</b> " + todo.getListaUtenti().getAutore() + "</html>"));
+        infoPanel.add(new JLabel("<html><b>Condiviso con:</b> " + (todo.getListaUtenti().getLista().isEmpty() ? "Nessuno" : String.join(", ", todo.getListaUtenti().getLista())) + "</html>"));
+        infoPanel.add(new JLabel("<html><b>Stato:</b> " + (Boolean.TRUE.equals(todo.getStato()) ? "Completato" : "Incompleto") + "</html>"));
+        infoPanel.add(new JLabel("<html><b>Scadenza:</b> " + (todo.getScadenza() != null ? todo.getScadenza().format(dateFormatter) : "N/D") + "</html>"));
 
         JLabel urlLabel = new JLabel("<html><b>URL:</b> <a href=\"" + (todo.getUrl() != null && !todo.getUrl().isEmpty() ? todo.getUrl() : "#") + "\">" + (todo.getUrl() != null && !todo.getUrl().isEmpty() ? todo.getUrl() : "N/D") + "</a></html>");
         if (todo.getUrl() != null && !todo.getUrl().isEmpty()) {
@@ -628,66 +675,59 @@ public class View extends JFrame {
                         if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
                             Desktop.getDesktop().browse(new URI(todo.getUrl()));
                         } else {
-                            JOptionPane.showMessageDialog(detailDialog, "Il browser non può essere aperto automaticamente.", "Errore", JOptionPane.ERROR_MESSAGE);
+                            JOptionPane.showMessageDialog(parentDialog, "Il browser non può essere aperto automaticamente.", ERROR_TITLE, JOptionPane.ERROR_MESSAGE);
                         }
                     } catch (URISyntaxException | IOException ex) {
-                        JOptionPane.showMessageDialog(detailDialog, "Errore nell'apertura dell'URL: " + ex.getMessage(), "Errore URL", JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(parentDialog, "Errore nell'apertura dell'URL: " + ex.getMessage(), "Errore URL", JOptionPane.ERROR_MESSAGE);
                     }
                 }
             });
         }
-
-        JLabel posizioneLabel = new JLabel("<html><b>Posizione:</b> " + (todo.getPosizione() != null && !todo.getPosizione().isEmpty() ? todo.getPosizione().trim() : "N/D") + "</html>");
-
+        infoPanel.add(urlLabel);
+        infoPanel.add(new JLabel("<html><b>Posizione:</b> " + (todo.getPosizione() != null && !todo.getPosizione().isEmpty() ? todo.getPosizione().trim() : "N/D") + "</html>"));
 
         String hexColor = String.format("%06x", todo.getColore().getRGB() & 0xFFFFFF);
-        JLabel colorLabel = new JLabel("<html><b>Colore:</b> <font color='#" + hexColor + "'>&#9632;</font> " + NamedColor.findNamedColor(todo.getColore()).getName() + "</html>");
-
-        infoPanel.add(titleLabel);
-        infoPanel.add(descLabel);
-        infoPanel.add(authorLabel);
-        infoPanel.add(sharedUsersLabel);
-        infoPanel.add(statusLabel);
-        infoPanel.add(dueDateLabel);
-        infoPanel.add(urlLabel);
-        infoPanel.add(posizioneLabel);
-        infoPanel.add(colorLabel);
+        infoPanel.add(new JLabel("<html><b>Colore:</b> <font color='#" + hexColor + "'>&#9632;</font> " + NamedColor.findNamedColor(todo.getColore()).getName() + "</html>"));
 
         if (todo.getImmagine() != null) {
             ImageIcon imageIcon = new ImageIcon(todo.getImmagine());
             Image image = imageIcon.getImage().getScaledInstance(100, 100, Image.SCALE_SMOOTH);
-            JLabel imageLabel = new JLabel(new ImageIcon(image));
-            infoPanel.add(imageLabel);
+            infoPanel.add(new JLabel(new ImageIcon(image)));
         }
 
+        return infoPanel;
+    }
 
-        detailDialog.add(infoPanel, BorderLayout.CENTER);
-
+    private JPanel createToDoDetailButtonPanel(ToDo todo, JDialog detailDialog) {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         JButton modifyButton = new JButton("Modifica");
         modifyButton.addActionListener(e -> {
             detailDialog.dispose();
             modificaToDo(todo);
         });
+
         JButton moveButton = new JButton("Sposta");
         moveButton.addActionListener(e -> {
             detailDialog.dispose();
             spostaToDo(todo);
         });
+
         JButton deleteButton = new JButton("Elimina");
         deleteButton.addActionListener(e -> {
             detailDialog.dispose();
             rimuoviToDo(todo);
         });
+
         JButton shareButton = new JButton("Condividi");
         shareButton.addActionListener(e -> {
             detailDialog.dispose();
             condividiToDo(todo);
         });
-        JButton toggleStatusButton = new JButton(todo.getStato() ? "Segna Incompleto" : "Segna Completato");
+
+        JButton toggleStatusButton = new JButton(Boolean.TRUE.equals(todo.getStato()) ? "Segna Incompleto" : "Segna Completato");
         toggleStatusButton.addActionListener(e -> {
             detailDialog.dispose();
-            controller.toggleToDoStatus(selectedBoardTitle, todo, !todo.getStato());
+            controller.toggleToDoStatus(selectedBoardTitle, todo, !Boolean.TRUE.equals(todo.getStato()));
         });
 
         JButton closeButton = new JButton("Chiudi");
@@ -700,8 +740,7 @@ public class View extends JFrame {
         buttonPanel.add(toggleStatusButton);
         buttonPanel.add(closeButton);
 
-        detailDialog.add(buttonPanel, BorderLayout.SOUTH);
-        detailDialog.setVisible(true);
+        return buttonPanel;
     }
 
     /**
@@ -720,68 +759,14 @@ public class View extends JFrame {
         JTextField urlField = new JTextField();
         JTextField posizioneField = new JTextField();
         JComboBox<NamedColor> colorSelector = new JComboBox<>(predefinedColors);
-        colorSelector.setSelectedIndex(0);
-
         final byte[][] immagineSelezionata = {null};
-        JButton allegaImmagineButton = new JButton("Allega Immagine");
-        allegaImmagineButton.addActionListener(ev -> {
-            JFileChooser fileChooser = new JFileChooser();
-            int result = fileChooser.showOpenDialog(this);
-            if (result == JFileChooser.APPROVE_OPTION) {
-                File file = fileChooser.getSelectedFile();
-                try {
-                    immagineSelezionata[0] = Files.readAllBytes(file.toPath());
-                    JOptionPane.showMessageDialog(this, "Immagine allegata con successo!");
-                } catch (IOException ex) {
-                    JOptionPane.showMessageDialog(this, "Errore nella lettura dell'immagine.", "Errore", JOptionPane.ERROR_MESSAGE);
-                }
-            }
-        });
 
-        JPanel colorPreviewPanel = new JPanel();
-        colorPreviewPanel.setBackground(predefinedColors[0].getColor());
-        colorPreviewPanel.setPreferredSize(new Dimension(20, 20));
-        colorSelector.addActionListener(ev -> {
-            NamedColor selected = (NamedColor) colorSelector.getSelectedItem();
-            if (selected != null) {
-                colorPreviewPanel.setBackground(selected.getColor());
-            }
-        });
-
-        JPanel panel = new JPanel(new GridLayout(0, 1));
-        panel.add(new JLabel("Titolo:"));
-        panel.add(titoloField);
-        panel.add(new JLabel("Descrizione:"));
-        panel.add(descrizioneField);
-        panel.add(new JLabel("Data Scadenza (gg/mm/aaaa):"));
-        panel.add(dataScadenzaField);
-        panel.add(new JLabel("URL (opzionale):"));
-        panel.add(urlField);
-        panel.add(new JLabel("Posizione (opzionale):"));
-        panel.add(posizioneField);
-        panel.add(allegaImmagineButton);
-
-
-        JPanel colorPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        colorPanel.add(new JLabel("Colore:"));
-        colorPanel.add(colorSelector);
-        colorPanel.add(colorPreviewPanel);
-        panel.add(colorPanel);
+        JPanel panel = createAddToDoPanel(titoloField, descrizioneField, dataScadenzaField, urlField, posizioneField, colorSelector, immagineSelezionata);
 
         int result = JOptionPane.showConfirmDialog(this, panel, "Nuovo ToDo", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
         if (result == JOptionPane.OK_OPTION) {
             if (controller.getUtenteCorrente() != null) {
-                String dataInput = dataScadenzaField.getText().trim();
-                LocalDate scadenza = LocalDate.now().plusDays(7);
-                if (!dataInput.isEmpty()) {
-                    try {
-                        scadenza = LocalDate.parse(dataInput, dateFormatter);
-                    } catch (DateTimeParseException ex) {
-                        JOptionPane.showMessageDialog(this, "Formato data non valido. Usare gg/mm/aaaa.\nVerrà usata una data predefinita.", "Errore Data", JOptionPane.ERROR_MESSAGE);
-                    }
-                } else {
-                    JOptionPane.showMessageDialog(this, "Data di scadenza non inserita. Verrà usata una data predefinita.", "Info Data", JOptionPane.INFORMATION_MESSAGE);
-                }
+                LocalDate scadenza = parseDateInput(dataScadenzaField.getText(), LocalDate.now().plusDays(7), true);
 
                 NamedColor namedColorSelected = (NamedColor) colorSelector.getSelectedItem();
                 Color coloreScelto = (namedColorSelected != null) ? namedColorSelected.getColor() : Color.WHITE;
@@ -800,10 +785,87 @@ public class View extends JFrame {
                 controller.aggiungiToDo(selectedBoardTitle, nuovo);
                 refreshToDoList();
             } else {
-                JOptionPane.showMessageDialog(this, "Errore: Assicurati di essere loggato.", "Errore", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Errore: Assicurati di essere loggato.", ERROR_TITLE, JOptionPane.ERROR_MESSAGE);
             }
         }
     }
+
+    private JPanel createAddToDoPanel(JTextField titoloField, JTextField descrizioneField, JTextField dataScadenzaField, JTextField urlField, JTextField posizioneField, JComboBox<NamedColor> colorSelector, byte[][] immagineSelezionata) {
+        JPanel panel = new JPanel(new GridLayout(0, 1));
+        panel.add(new JLabel("Titolo:"));
+        panel.add(titoloField);
+        panel.add(new JLabel("Descrizione:"));
+        panel.add(descrizioneField);
+        panel.add(new JLabel("Data Scadenza (gg/mm/aaaa):"));
+        panel.add(dataScadenzaField);
+        panel.add(new JLabel("URL (opzionale):"));
+        panel.add(urlField);
+        panel.add(new JLabel("Posizione (opzionale):"));
+        panel.add(posizioneField);
+
+        JButton allegaImmagineButton = new JButton("Allega Immagine");
+        allegaImmagineButton.addActionListener(ev -> {
+            JFileChooser fileChooser = new JFileChooser();
+            if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+                File file = fileChooser.getSelectedFile();
+                try {
+                    immagineSelezionata[0] = Files.readAllBytes(file.toPath());
+                    JOptionPane.showMessageDialog(this, "Immagine allegata con successo!");
+                } catch (IOException ex) {
+                    JOptionPane.showMessageDialog(this, "Errore nella lettura dell'immagine.", ERROR_TITLE, JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+        panel.add(allegaImmagineButton);
+
+        colorSelector.setSelectedIndex(0);
+        JPanel colorPreviewPanel = new JPanel();
+        colorPreviewPanel.setBackground(predefinedColors[0].getColor());
+        colorPreviewPanel.setPreferredSize(new Dimension(20, 20));
+        colorSelector.addActionListener(ev -> {
+            NamedColor selected = (NamedColor) colorSelector.getSelectedItem();
+            if (selected != null) {
+                colorPreviewPanel.setBackground(selected.getColor());
+            }
+        });
+        JPanel colorPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        colorPanel.add(new JLabel("Colore:"));
+        colorPanel.add(colorSelector);
+        colorPanel.add(colorPreviewPanel);
+        panel.add(colorPanel);
+
+        return panel;
+    }
+
+
+    private LocalDate parseDateInput(String dateInput, LocalDate defaultDate, boolean isNew) {
+        String trimmedInput = (dateInput != null) ? dateInput.trim() : "";
+        if (!trimmedInput.isEmpty()) {
+            try {
+                return LocalDate.parse(trimmedInput, dateFormatter);
+            } catch (DateTimeParseException _) {
+                String message = "Formato data non valido. Usare gg/mm/aaaa.\n" +
+                        (isNew ? "Verrà usata una data predefinita." : "La data di scadenza non sarà modificata.");
+                JOptionPane.showMessageDialog(this, message, "Errore Data", JOptionPane.ERROR_MESSAGE);
+                return defaultDate;
+            }
+        } else {
+            String message;
+            if (isNew) {
+                message = "Data di scadenza non inserita. Verrà usata una data predefinita.";
+            } else if (defaultDate != null) {
+                message = "Il campo data è stato lasciato vuoto. La data di scadenza è stata rimossa.";
+            } else {
+                message = null;
+            }
+
+            if (message != null) {
+                JOptionPane.showMessageDialog(this, message, "Info Data", JOptionPane.INFORMATION_MESSAGE);
+            }
+            return isNew ? defaultDate : null;
+        }
+    }
+
 
     private void modificaToDo(ToDo toDoDaModificare) {
         JTextField titoloField = new JTextField(toDoDaModificare.getTitolo());
@@ -811,39 +873,29 @@ public class View extends JFrame {
         JTextField dataScadenzaField = new JTextField(toDoDaModificare.getScadenza() != null ? toDoDaModificare.getScadenza().format(dateFormatter) : "");
         JTextField urlField = new JTextField(toDoDaModificare.getUrl());
         JTextField posizioneField = new JTextField(toDoDaModificare.getPosizione());
-        JCheckBox completatoCheckBoxDialog = new JCheckBox("Completato", toDoDaModificare.getStato());
-
+        JCheckBox completatoCheckBoxDialog = new JCheckBox("Completato", Boolean.TRUE.equals(toDoDaModificare.getStato()));
         JComboBox<NamedColor> colorSelectorModify = new JComboBox<>(predefinedColors);
-        NamedColor currentColor = NamedColor.findNamedColor(toDoDaModificare.getColore());
-        colorSelectorModify.setSelectedItem(currentColor);
-
-        JPanel colorPreviewPanelModify = new JPanel();
-        colorPreviewPanelModify.setBackground(currentColor.getColor());
-        colorPreviewPanelModify.setPreferredSize(new Dimension(20, 20));
-        colorSelectorModify.addActionListener(ev -> {
-            NamedColor selected = (NamedColor) colorSelectorModify.getSelectedItem();
-            if (selected != null) {
-                colorPreviewPanelModify.setBackground(selected.getColor());
-            }
-        });
-
-        JButton attachImageButton = new JButton("Allega Immagine");
         final byte[][] nuovaImmagine = {toDoDaModificare.getImmagine()};
-        attachImageButton.addActionListener(e -> {
-            JFileChooser fileChooser = new JFileChooser();
-            int resultFileChooser = fileChooser.showOpenDialog(this);
-            if (resultFileChooser == JFileChooser.APPROVE_OPTION) {
-                File selectedFile = fileChooser.getSelectedFile();
-                try {
-                    nuovaImmagine[0] = Files.readAllBytes(selectedFile.toPath());
-                    JOptionPane.showMessageDialog(this, "Immagine allegata con successo.");
-                } catch (IOException ex) {
-                    JOptionPane.showMessageDialog(this, "Errore durante la lettura dell'immagine.", "Errore", JOptionPane.ERROR_MESSAGE);
-                }
-            }
-        });
 
+        JPanel panel = createModifyToDoPanel(toDoDaModificare, titoloField, descrizioneField, dataScadenzaField, urlField, posizioneField, completatoCheckBoxDialog, colorSelectorModify, nuovaImmagine);
 
+        int result = JOptionPane.showConfirmDialog(this, panel, "Modifica ToDo", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (result == JOptionPane.OK_OPTION) {
+            String nuovoTitolo = titoloField.getText();
+            String nuovaDescrizione = descrizioneField.getText();
+            String nuovoUrl = urlField.getText().trim();
+            String nuovaPosizione = posizioneField.getText().trim();
+            boolean nuovoStato = completatoCheckBoxDialog.isSelected();
+            NamedColor namedColorSelected = (NamedColor) colorSelectorModify.getSelectedItem();
+            Color nuovoColore = (namedColorSelected != null) ? namedColorSelected.getColor() : Color.WHITE;
+
+            LocalDate nuovaScadenza = parseDateInput(dataScadenzaField.getText(), toDoDaModificare.getScadenza(), false);
+
+            controller.modificaToDo(selectedBoardTitle, toDoDaModificare, nuovoTitolo, nuovaDescrizione, nuovaScadenza, nuovoStato, nuovoColore, nuovoUrl, nuovaPosizione, toDoDaModificare.getImmagine());
+        }
+    }
+
+    private JPanel createModifyToDoPanel(ToDo toDoDaModificare, JTextField titoloField, JTextField descrizioneField, JTextField dataScadenzaField, JTextField urlField, JTextField posizioneField, JCheckBox completatoCheckBoxDialog, JComboBox<NamedColor> colorSelectorModify, byte[][] nuovaImmagine) {
         JPanel panel = new JPanel(new GridLayout(0, 1));
         panel.add(new JLabel("Titolo:"));
         panel.add(titoloField);
@@ -856,40 +908,42 @@ public class View extends JFrame {
         panel.add(new JLabel("Posizione (opzionale):"));
         panel.add(posizioneField);
         panel.add(completatoCheckBoxDialog);
+
+        JButton attachImageButton = new JButton("Allega Immagine");
+        attachImageButton.addActionListener(e -> {
+            JFileChooser fileChooser = new JFileChooser();
+            if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+                File selectedFile = fileChooser.getSelectedFile();
+                try {
+                    nuovaImmagine[0] = Files.readAllBytes(selectedFile.toPath());
+                    JOptionPane.showMessageDialog(this, "Immagine allegata con successo.");
+                } catch (IOException ex) {
+                    JOptionPane.showMessageDialog(this, "Errore durante la lettura dell'immagine.", ERROR_TITLE, JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
         panel.add(attachImageButton);
 
+        NamedColor currentColor = NamedColor.findNamedColor(toDoDaModificare.getColore());
+        colorSelectorModify.setSelectedItem(currentColor);
+        JPanel colorPreviewPanelModify = new JPanel();
+        colorPreviewPanelModify.setBackground(currentColor.getColor());
+        colorPreviewPanelModify.setPreferredSize(new Dimension(20, 20));
+        colorSelectorModify.addActionListener(ev -> {
+            NamedColor selected = (NamedColor) colorSelectorModify.getSelectedItem();
+            if (selected != null) {
+                colorPreviewPanelModify.setBackground(selected.getColor());
+            }
+        });
         JPanel colorPanelModify = new JPanel(new FlowLayout(FlowLayout.LEFT));
         colorPanelModify.add(new JLabel("Colore:"));
         colorPanelModify.add(colorSelectorModify);
         colorPanelModify.add(colorPreviewPanelModify);
         panel.add(colorPanelModify);
 
-        int result = JOptionPane.showConfirmDialog(this, panel, "Modifica ToDo", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (result == JOptionPane.OK_OPTION) {
-            String nuovoTitolo = titoloField.getText();
-            String nuovaDescrizione = descrizioneField.getText();
-            String dataInput = dataScadenzaField.getText().trim();
-            String nuovoUrl = urlField.getText().trim();
-            String nuovaPosizione = posizioneField.getText().trim();
-            boolean nuovoStato = completatoCheckBoxDialog.isSelected();
-            NamedColor namedColorSelected = (NamedColor) colorSelectorModify.getSelectedItem();
-            Color nuovoColore = (namedColorSelected != null) ? namedColorSelected.getColor() : Color.WHITE;
-
-            LocalDate nuovaScadenza = toDoDaModificare.getScadenza();
-            if (!dataInput.isEmpty()) {
-                try {
-                    nuovaScadenza = LocalDate.parse(dataInput, dateFormatter);
-                } catch (DateTimeParseException ex) {
-                    JOptionPane.showMessageDialog(this, "Formato data non valido. Usare gg/mm/aaaa.\nLa data di scadenza non sarà modificata.", "Errore Data", JOptionPane.ERROR_MESSAGE);
-                }
-            } else if (toDoDaModificare.getScadenza() != null && dataInput.isEmpty()){
-                nuovaScadenza = null;
-                JOptionPane.showMessageDialog(this, "Il campo data è stato lasciato vuoto. La data di scadenza è stata rimossa.", "Info Data", JOptionPane.INFORMATION_MESSAGE);
-            }
-
-            controller.modificaToDo(selectedBoardTitle, toDoDaModificare, nuovoTitolo, nuovaDescrizione, nuovaScadenza, nuovoStato, nuovoColore, nuovoUrl, nuovaPosizione, toDoDaModificare.getImmagine());
-        }
+        return panel;
     }
+
 
     private void spostaToDo(ToDo toDoDaSpostare) {
         if (toDoDaSpostare == null) {
@@ -935,28 +989,47 @@ public class View extends JFrame {
 
     private void condividiToDo(ToDo todo) {
         ListaUtenti contatti = controller.getContatti();
-        if (contatti == null || contatti.getLista().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Non hai contatti da cui scegliere. Aggiungine uno dalla sezione 'Contatti'.", "Nessun Contatto", JOptionPane.INFORMATION_MESSAGE);
-            return;
-        }
 
-        JPanel panel = new JPanel(new GridLayout(0, 1));
-        panel.add(new JLabel("Seleziona i contatti con cui condividere:"));
+        JPanel panel = new JPanel(new BorderLayout(10, 10));
+        panel.add(new JLabel("Seleziona i contatti o inserisci una nuova email:"), BorderLayout.NORTH);
 
+        // Pannello per i contatti esistenti
+        JPanel contattiPanel = new JPanel(new GridLayout(0, 1));
         List<JCheckBox> checkBoxes = new ArrayList<>();
-        for (String email : contatti.getLista()) {
-            JCheckBox checkBox = new JCheckBox(email);
-            checkBoxes.add(checkBox);
-            panel.add(checkBox);
+        if (contatti != null && !contatti.getLista().isEmpty()) {
+            for (String email : contatti.getLista()) {
+                JCheckBox checkBox = new JCheckBox(email);
+                checkBoxes.add(checkBox);
+                contattiPanel.add(checkBox);
+            }
+        } else {
+            contattiPanel.add(new JLabel("Nessun contatto disponibile."));
         }
 
-        int result = JOptionPane.showConfirmDialog(this, new JScrollPane(panel), "Condividi con i Contatti", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        // Pannello per l'inserimento di una nuova email
+        JPanel emailInputPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        emailInputPanel.setBorder(BorderFactory.createTitledBorder("Condividi con una nuova email"));
+        JTextField emailField = new JTextField(25);
+        emailInputPanel.add(new JLabel("Email:"));
+        emailInputPanel.add(emailField);
+
+        panel.add(new JScrollPane(contattiPanel), BorderLayout.CENTER);
+        panel.add(emailInputPanel, BorderLayout.SOUTH);
+
+        int result = JOptionPane.showConfirmDialog(this, panel, "Condividi ToDo", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
 
         if (result == JOptionPane.OK_OPTION) {
+            // Condivisione con i contatti selezionati
             for (JCheckBox checkBox : checkBoxes) {
                 if (checkBox.isSelected()) {
                     controller.condividiToDo(todo, checkBox.getText());
                 }
+            }
+
+            // Condivisione con la nuova email inserita
+            String nuovaEmail = emailField.getText().trim();
+            if (!nuovaEmail.isEmpty()) {
+                controller.condividiToDo(todo, nuovaEmail);
             }
             refreshToDoList();
         }
@@ -970,7 +1043,7 @@ public class View extends JFrame {
         }
         Bacheca bachecaCorrente = controller.getBacheche().get(selectedBoardTitle);
         if (bachecaCorrente == null) {
-            JOptionPane.showMessageDialog(this, "Errore: Bacheca non trovata.", "Errore", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Errore: Bacheca non trovata.", ERROR_TITLE, JOptionPane.ERROR_MESSAGE);
             return;
         }
         String descrizioneAttuale = bachecaCorrente.getDescrizione();
@@ -978,7 +1051,7 @@ public class View extends JFrame {
         Object input = JOptionPane.showInputDialog(
                 this,
                 "Modifica descrizione per la bacheca '" + selectedBoardTitle.name() + "':",
-                "Modifica Descrizione Bacheca",
+                MODIFY_BOARD_DESC_TITLE,
                 JOptionPane.PLAIN_MESSAGE,
                 null,
                 null,
@@ -1013,8 +1086,7 @@ public class View extends JFrame {
     }
 
     public void refreshContatti() {
-        // This method can be expanded to update the contacts dialog if it's open
-        System.out.println("Contact list refreshed.");
+        LOGGER.log(Level.INFO, "Contact list refreshed.");
     }
 
     private void showContactsDialog() {
@@ -1076,7 +1148,7 @@ public class View extends JFrame {
 
 
     public static class ToDoCellRenderer extends JCheckBox implements ListCellRenderer<ToDo> {
-        private final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        private static final DateTimeFormatter cellDateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
         public ToDoCellRenderer() {
             setOpaque(true);
@@ -1086,8 +1158,8 @@ public class View extends JFrame {
         public Component getListCellRendererComponent(JList<? extends ToDo> list, ToDo todo, int index,
                                                       boolean isSelected, boolean cellHasFocus) {
             if (todo != null) {
-                setSelected(todo.getStato());
-                String scadenzaStr = (todo.getScadenza() != null) ? todo.getScadenza().format(dateFormatter) : "N/D";
+                setSelected(Boolean.TRUE.equals(todo.getStato()));
+                String scadenzaStr = (todo.getScadenza() != null) ? todo.getScadenza().format(cellDateFormatter) : "N/D";
                 setText(String.format("%s (Scad: %s) - %s",
                         todo.getTitolo(), scadenzaStr, todo.getDescrizione()));
 
@@ -1097,7 +1169,7 @@ public class View extends JFrame {
                 } else {
                     Color bgColor = todo.getColore() != null ? todo.getColore() : list.getBackground();
                     setBackground(bgColor);
-                    if (bgColor != null && ToDoCellRenderer.isColorDark(bgColor) && !bgColor.equals(Color.WHITE)) {
+                    if (bgColor != null && isColorDark(bgColor) && !bgColor.equals(Color.WHITE)) {
                         setForeground(Color.WHITE);
                     } else {
                         setForeground(Color.BLACK);
@@ -1115,7 +1187,6 @@ public class View extends JFrame {
             return this;
         }
 
-        // Metodo reso statico
         private static boolean isColorDark(Color color) {
             if (color == null) return false;
             double luminance = (0.299 * color.getRed() + 0.587 * color.getGreen() + 0.114 * color.getBlue()) / 255;
