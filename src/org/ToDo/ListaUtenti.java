@@ -44,5 +44,3 @@ public class ListaUtenti {
         return "Autore: " + Autore + "\nCondiviso con: " + Lista.toString();
     }
 }
-
-

@@ -1,9 +1,7 @@
 package controller;
 
-import dao.BachecaDAO;
-import dao.ListaUtentiDAO;
-import dao.ToDoDAO;
-import dao.UtenteDAO;
+import dao.*;
+import implementazioniPostgresDAO.*;
 import org.ToDo.Bacheca;
 import org.ToDo.ListaUtenti;
 import org.ToDo.Titolo;
@@ -28,10 +26,10 @@ public class Controller {
     private ListaUtenti contatti;
 
     public Controller() {
-        this.utenteDAO = new UtenteDAO();
-        this.bachecaDAO = new BachecaDAO();
-        this.toDoDAO = new ToDoDAO();
-        this.listaUtentiDAO = new ListaUtentiDAO();
+        this.utenteDAO = new UtenteDAOImpl();
+        this.bachecaDAO = new BachecaDAOImpl();
+        this.toDoDAO = new ToDoDAOImpl();
+        this.listaUtentiDAO = new ListaUtentiDAOImpl();
     }
 
     public void init() {
