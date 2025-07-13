@@ -31,13 +31,12 @@ public class Controller {
         this.utenteDAO = new UtenteDAO();
         this.bachecaDAO = new BachecaDAO();
         this.toDoDAO = new ToDoDAO();
-        this.listaUtentiDAO = new ListaUtentiDAO(); // Unico DAO per le liste
+        this.listaUtentiDAO = new ListaUtentiDAO();
     }
 
     public void init() {
         while (true) {
             boolean autenticazioneRiuscita = gestisciAutenticazione();
-
             if (autenticazioneRiuscita) {
                 popolaDatiUtente();
                 SwingUtilities.invokeLater(() -> {
@@ -57,7 +56,6 @@ public class Controller {
 
     private void popolaDatiUtente() {
         this.bacheche = bachecaDAO.findAllForUser(this.utenteCorrente.getEmail());
-
         if (this.bacheche.isEmpty()) {
             for (Titolo t : Titolo.values()) {
                 Bacheca nuovaBacheca = new Bacheca(t, "Descrizione per " + t.name(), this.utenteCorrente.getEmail());
@@ -65,22 +63,17 @@ public class Controller {
                 this.bacheche.put(t, nuovaBacheca);
             }
         }
-
         for (Bacheca b : this.bacheche.values()) {
             b.setToDos(toDoDAO.findByBacheca(b.getTitolo(), this.utenteCorrente.getEmail()));
         }
-
         this.bachecaCondivisi = new Bacheca(null, "ToDo condivisi da altri utenti", this.utenteCorrente.getEmail());
         this.bachecaCondivisi.setToDos(toDoDAO.findSharedWithUser(this.utenteCorrente.getEmail()));
-
-        // Caricamento contatti utente tramite ListaUtentiDAO
         this.contatti = listaUtentiDAO.getContattiForUser(this.utenteCorrente.getEmail());
     }
 
     private boolean gestisciAutenticazione() {
         String[] opzioni = {"Login", "Registrati"};
         int scelta = JOptionPane.showOptionDialog(null, "Benvenuto! Cosa desideri fare?", "ToDo App", JOptionPane.DEFAULT_OPTION, JOptionPane.INFORMATION_MESSAGE, null, opzioni, opzioni[0]);
-
         if (scelta == 0) return eseguiLoginDialog();
         if (scelta == 1) {
             Utente nuovoUtente = eseguiRegistrazioneDialog();
@@ -89,7 +82,6 @@ public class Controller {
                 this.utenteCorrente = nuovoUtente;
                 return true;
             }
-            return false;
         }
         return false;
     }
@@ -108,7 +100,6 @@ public class Controller {
                 return true;
             } else {
                 JOptionPane.showMessageDialog(null, "Credenziali non valide. Riprova.", "Errore di Login", JOptionPane.ERROR_MESSAGE);
-                return false;
             }
         }
         return false;
@@ -120,7 +111,6 @@ public class Controller {
         JPasswordField confermaPasswordField = new JPasswordField(20);
         Object[] messaggio = {"Email:", emailField, "Password (min. 3 caratteri):", passwordField, "Conferma Password:", confermaPasswordField};
         int opzione = JOptionPane.showConfirmDialog(null, messaggio, "Registrazione", JOptionPane.OK_CANCEL_OPTION);
-
         if (opzione == JOptionPane.OK_OPTION) {
             String email = emailField.getText().trim();
             String password = new String(passwordField.getPassword());
@@ -140,7 +130,6 @@ public class Controller {
                 return nuovoUtente;
             } else {
                 JOptionPane.showMessageDialog(null, "Errore durante il salvataggio nel database.", "Errore Registrazione", JOptionPane.ERROR_MESSAGE);
-                return null;
             }
         }
         return null;
@@ -208,7 +197,6 @@ public class Controller {
         }
     }
 
-
     public void modificaDescrizioneBacheca(Titolo titoloBacheca, String nuovaDescrizione) {
         bachecaDAO.updateDescrizione(titoloBacheca, nuovaDescrizione, this.utenteCorrente.getEmail());
         this.bacheche.get(titoloBacheca).setDescrizione(nuovaDescrizione);
@@ -236,7 +224,6 @@ public class Controller {
         if (bachecaOrigine != null && toDoDaSpostare != null) {
             toDoDaSpostare.setBachecaTitolo(bachecaDestinazioneTitolo);
             toDoDAO.update(toDoDaSpostare);
-
             bachecaOrigine.getToDos().remove(toDoDaSpostare);
             this.bacheche.get(bachecaDestinazioneTitolo).aggiungiToDo(toDoDaSpostare);
             view.refreshToDoList();
@@ -248,16 +235,12 @@ public class Controller {
             JOptionPane.showMessageDialog(null, "Nessun utente registrato con l'email: " + emailToShareWith, "Errore Condivisione", JOptionPane.ERROR_MESSAGE);
             return;
         }
-
         if (todo.getAutoreEmail().equals(emailToShareWith)) {
             JOptionPane.showMessageDialog(null, "Non puoi condividere un ToDo con te stesso.", "Info", JOptionPane.INFORMATION_MESSAGE);
             return;
         }
-
         todo.getListaUtenti().aggiungiUtente(emailToShareWith);
         listaUtentiDAO.addUserToSharedList(todo.getId(), emailToShareWith);
-
         JOptionPane.showMessageDialog(null, "ToDo condiviso con successo con " + emailToShareWith, "Condivisione Riuscita", JOptionPane.INFORMATION_MESSAGE);
-        view.refreshToDoList();
     }
 }
