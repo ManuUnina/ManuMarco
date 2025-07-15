@@ -11,13 +11,18 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class BachecaDAOImpl implements BachecaDAO {
+
+    private static final Logger LOGGER = Logger.getLogger(BachecaDAOImpl.class.getName());
 
     @Override
     public Map<Titolo, Bacheca> findAllForUser(String utenteEmail) {
         Map<Titolo, Bacheca> bacheche = new EnumMap<>(Titolo.class);
-        String sql = "SELECT * FROM bacheca WHERE utente_email = ?";
+        // La query ora seleziona solo le colonne necessarie
+        String sql = "SELECT titolo, descrizione FROM bacheca WHERE utente_email = ?";
 
         try (Connection conn = ConnectionFactory.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -28,12 +33,14 @@ public class BachecaDAOImpl implements BachecaDAO {
             while (rs.next()) {
                 Titolo titolo = Titolo.valueOf(rs.getString("titolo"));
                 String descrizione = rs.getString("descrizione");
+                // L'utenteEmail viene passato come parametro, quindi non è necessario selezionarlo
                 Bacheca bacheca = new Bacheca(titolo, descrizione, utenteEmail);
                 bacheche.put(titolo, bacheca);
             }
 
         } catch (SQLException e) {
-            e.printStackTrace();
+            // Sostituito e.printStackTrace() con un logger
+            LOGGER.log(Level.SEVERE, "Errore durante la ricerca delle bacheche per l'utente: " + utenteEmail, e);
         }
         return bacheche;
     }
@@ -50,7 +57,7 @@ public class BachecaDAOImpl implements BachecaDAO {
             pstmt.executeUpdate();
 
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Errore durante il salvataggio della bacheca", e);
         }
     }
 
@@ -66,7 +73,7 @@ public class BachecaDAOImpl implements BachecaDAO {
             pstmt.executeUpdate();
 
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Errore durante l'aggiornamento della descrizione della bacheca", e);
         }
     }
 }

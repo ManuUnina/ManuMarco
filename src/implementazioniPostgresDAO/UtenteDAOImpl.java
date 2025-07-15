@@ -8,12 +8,16 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class UtenteDAOImpl implements UtenteDAO {
 
+    private static final Logger LOGGER = Logger.getLogger(UtenteDAOImpl.class.getName());
+
     @Override
     public Utente findByEmailAndPassword(String email, String password) {
-        String sql = "SELECT * FROM utente WHERE email = ? AND password = ?";
+        String sql = "SELECT email, password FROM utente WHERE email = ? AND password = ?";
         try (Connection conn = ConnectionFactory.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
@@ -26,7 +30,7 @@ public class UtenteDAOImpl implements UtenteDAO {
                 return new Utente(rs.getString("email"), rs.getString("password"));
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Errore durante la ricerca dell'utente con email: " + email, e);
         }
         return null;
     }
@@ -40,7 +44,7 @@ public class UtenteDAOImpl implements UtenteDAO {
             ResultSet rs = pstmt.executeQuery();
             return rs.next();
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Errore durante la verifica dell'email: " + email, e);
         }
         return false;
     }
@@ -57,7 +61,7 @@ public class UtenteDAOImpl implements UtenteDAO {
             int righeInserite = pstmt.executeUpdate();
             return righeInserite > 0;
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Errore durante la registrazione del nuovo utente con email: " + utente.getEmail(), e);
             return false;
         }
     }

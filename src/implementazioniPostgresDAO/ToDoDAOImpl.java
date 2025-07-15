@@ -10,15 +10,41 @@ import java.awt.Color;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class ToDoDAOImpl implements ToDoDAO {
 
+    private static final Logger LOGGER = Logger.getLogger(ToDoDAOImpl.class.getName());
     private final ListaUtentiDAO listaUtentiDAO = new ListaUtentiDAOImpl();
+
+    /**
+     * Metodo privato per creare un oggetto ToDo da un ResultSet, evitando duplicazioni.
+     */
+    private ToDo createToDoFromResultSet(ResultSet rs) throws SQLException {
+        String autoreEmail = rs.getString("autore_email");
+        ToDo todo = new ToDo(
+                rs.getString("titolo"),
+                rs.getString("descrizione"),
+                rs.getDate("scadenza").toLocalDate(),
+                rs.getBoolean("stato"),
+                rs.getString("url"),
+                rs.getString("posizione"),
+                Color.decode(rs.getString("colore")),
+                rs.getBytes("immagine"),
+                Titolo.valueOf(rs.getString("bacheca_titolo")),
+                autoreEmail
+        );
+        todo.setId(rs.getInt("id"));
+        todo.setListaUtenti(listaUtentiDAO.getSharedUsersForToDo(todo.getId(), autoreEmail));
+        return todo;
+    }
 
     @Override
     public List<ToDo> findByBacheca(Titolo bachecaTitolo, String utenteEmail) {
         List<ToDo> toDos = new ArrayList<>();
-        String sql = "SELECT * FROM todo WHERE bacheca_titolo = ? AND autore_email = ?";
+        // Sostituito SELECT * con la lista esplicita delle colonne
+        String sql = "SELECT id, titolo, descrizione, scadenza, stato, url, colore, immagine, posizione, bacheca_titolo, autore_email FROM todo WHERE bacheca_titolo = ? AND autore_email = ?";
         try (Connection conn = ConnectionFactory.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
@@ -27,26 +53,10 @@ public class ToDoDAOImpl implements ToDoDAO {
             ResultSet rs = pstmt.executeQuery();
 
             while (rs.next()) {
-                String autoreEmail = rs.getString("autore_email");
-                ToDo todo = new ToDo(
-                        rs.getString("titolo"),
-                        rs.getString("descrizione"),
-                        rs.getDate("scadenza").toLocalDate(),
-                        rs.getBoolean("stato"),
-                        rs.getString("url"),
-                        rs.getString("posizione"),
-                        Color.decode(rs.getString("colore")),
-                        rs.getBytes("immagine"),
-                        Titolo.valueOf(rs.getString("bacheca_titolo")),
-                        autoreEmail
-                );
-                todo.setId(rs.getInt("id"));
-
-                todo.setListaUtenti(listaUtentiDAO.getSharedUsersForToDo(todo.getId(), autoreEmail));
-                toDos.add(todo);
+                toDos.add(createToDoFromResultSet(rs)); // Utilizzo del metodo helper
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Errore nel recupero dei ToDo per la bacheca", e);
         }
         return toDos;
     }
@@ -67,7 +77,6 @@ public class ToDoDAOImpl implements ToDoDAO {
             pstmt.setObject(8, todo.getBachecaTitolo(), java.sql.Types.OTHER);
             pstmt.setString(9, todo.getAutoreEmail());
             pstmt.setString(10, todo.getPosizione());
-
             pstmt.executeUpdate();
 
             ResultSet generatedKeys = pstmt.getGeneratedKeys();
@@ -78,9 +87,8 @@ public class ToDoDAOImpl implements ToDoDAO {
             for (String email : todo.getListaUtenti().getLista()) {
                 listaUtentiDAO.addUserToSharedList(todo.getId(), email);
             }
-
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Errore durante il salvataggio del ToDo", e);
         }
     }
 
@@ -100,11 +108,10 @@ public class ToDoDAOImpl implements ToDoDAO {
             pstmt.setObject(8, todo.getBachecaTitolo(), java.sql.Types.OTHER);
             pstmt.setString(9, todo.getPosizione());
             pstmt.setInt(10, todo.getId());
-
             pstmt.executeUpdate();
 
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Errore durante l'aggiornamento del ToDo con ID: " + todo.getId(), e);
         }
     }
 
@@ -116,38 +123,24 @@ public class ToDoDAOImpl implements ToDoDAO {
             pstmt.setInt(1, todoId);
             pstmt.executeUpdate();
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Errore durante l'eliminazione del ToDo con ID: " + todoId, e);
         }
     }
 
     @Override
     public List<ToDo> findSharedWithUser(String userEmail) {
         List<ToDo> toDos = new ArrayList<>();
-        String sql = "SELECT t.* FROM todo t JOIN todo_utenti_condivisi s ON t.id = s.todo_id WHERE s.utente_email = ?";
+        // Sostituito SELECT t.* con la lista esplicita delle colonne
+        String sql = "SELECT t.id, t.titolo, t.descrizione, t.scadenza, t.stato, t.url, t.colore, t.immagine, t.posizione, t.bacheca_titolo, t.autore_email FROM todo t JOIN todo_utenti_condivisi s ON t.id = s.todo_id WHERE s.utente_email = ?";
         try (Connection conn = ConnectionFactory.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, userEmail);
             ResultSet rs = pstmt.executeQuery();
             while (rs.next()) {
-                String autoreEmail = rs.getString("autore_email");
-                ToDo todo = new ToDo(
-                        rs.getString("titolo"),
-                        rs.getString("descrizione"),
-                        rs.getDate("scadenza").toLocalDate(),
-                        rs.getBoolean("stato"),
-                        rs.getString("url"),
-                        rs.getString("posizione"),
-                        Color.decode(rs.getString("colore")),
-                        rs.getBytes("immagine"),
-                        Titolo.valueOf(rs.getString("bacheca_titolo")),
-                        autoreEmail
-                );
-                todo.setId(rs.getInt("id"));
-                todo.setListaUtenti(listaUtentiDAO.getSharedUsersForToDo(todo.getId(), autoreEmail));
-                toDos.add(todo);
+                toDos.add(createToDoFromResultSet(rs)); // Utilizzo del metodo helper
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Errore nel recupero dei ToDo condivisi con l'utente: " + userEmail, e);
         }
         return toDos;
     }

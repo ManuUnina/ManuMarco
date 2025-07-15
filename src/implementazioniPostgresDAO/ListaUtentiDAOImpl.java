@@ -9,8 +9,12 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class ListaUtentiDAOImpl implements ListaUtentiDAO {
+
+    private static final Logger LOGGER = Logger.getLogger(ListaUtentiDAOImpl.class.getName());
 
     @Override
     public void addUserToSharedList(int todoId, String email) {
@@ -21,7 +25,7 @@ public class ListaUtentiDAOImpl implements ListaUtentiDAO {
             pstmt.setString(2, email);
             pstmt.executeUpdate();
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Errore durante l'aggiunta dell'utente alla lista condivisa.", e);
         }
     }
 
@@ -37,7 +41,7 @@ public class ListaUtentiDAOImpl implements ListaUtentiDAO {
                 sharedUsers.add(rs.getString("utente_email"));
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Errore nel recupero degli utenti condivisi per il ToDo ID: " + todoId, e);
         }
         return new ListaUtenti(autoreEmail, sharedUsers);
     }
@@ -54,7 +58,7 @@ public class ListaUtentiDAOImpl implements ListaUtentiDAO {
                 contatti.add(rs.getString("contatto_email"));
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Errore nel recupero dei contatti per l'utente: " + utenteEmail, e);
         }
         return new ListaUtenti(utenteEmail, contatti);
     }
@@ -68,7 +72,7 @@ public class ListaUtentiDAOImpl implements ListaUtentiDAO {
             pstmt.setString(2, contattoEmail);
             pstmt.executeUpdate();
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Errore durante l'aggiunta del contatto.", e);
         }
     }
 
@@ -81,7 +85,7 @@ public class ListaUtentiDAOImpl implements ListaUtentiDAO {
             pstmt.setString(2, contattoEmail);
             pstmt.executeUpdate();
         } catch (SQLException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Errore durante la rimozione del contatto.", e);
         }
     }
 }
