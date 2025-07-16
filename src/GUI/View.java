@@ -155,6 +155,13 @@ public class View extends JFrame {
         profileButton.addActionListener(_ -> showProfileDialog());
         buttonContainer.add(profileButton);
 
+        // --- NUOVO PULSANTE "CONDIVISI" ---
+        JButton sharedButton = new JButton("Condivisi");
+        sharedButton.setFocusPainted(false);
+        sharedButton.addActionListener(_ -> showSharedToDoList());
+        buttonContainer.add(sharedButton);
+        // ------------------------------------
+
         JButton allIncompleteToDosButton = new JButton("ToDo");
         allIncompleteToDosButton.setFocusPainted(false);
         allIncompleteToDosButton.addActionListener(_ -> showAllIncompleteToDos());
@@ -178,13 +185,12 @@ public class View extends JFrame {
     }
 
     private JPanel createBoardSelectionContainer() {
-        JPanel container = new JPanel(new GridLayout(1, 4, 20, 0));
+        JPanel container = new JPanel(new GridLayout(1, 3, 20, 0));
         container.setBorder(BorderFactory.createEmptyBorder(50, 50, 50, 50));
         container.setBackground(new Color(240, 240, 240));
         for (Titolo title : Titolo.values()) {
             container.add(createBoardPanel(title));
         }
-        container.add(createSharedBoardPanel());
         return container;
     }
 
@@ -201,23 +207,6 @@ public class View extends JFrame {
             public void mouseClicked(MouseEvent unused) {
                 selectedBoardTitle = title;
                 showToDoListForBoard();
-            }
-        });
-        return panel;
-    }
-
-    private JPanel createSharedBoardPanel() {
-        JPanel panel = new JPanel(new BorderLayout(10, 10));
-        panel.setBorder(BorderFactory.createLineBorder(Color.ORANGE, 2));
-        panel.setBackground(new Color(255, 248, 225));
-        panel.setPreferredSize(new Dimension(200, 150));
-        JLabel titleLabel = new JLabel("Condivisi con me", SwingConstants.CENTER);
-        titleLabel.setFont(new Font(FONT_NAME, Font.BOLD, 18));
-        panel.add(titleLabel, BorderLayout.CENTER);
-        panel.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent unused) {
-                showSharedToDoList();
             }
         });
         return panel;
@@ -494,11 +483,28 @@ public class View extends JFrame {
 
         if (todo.getImmagine() != null) {
             ImageIcon imageIcon = new ImageIcon(todo.getImmagine());
-            Image image = imageIcon.getImage().getScaledInstance(100, 100, Image.SCALE_SMOOTH);
-            infoPanel.add(new JLabel(new ImageIcon(image)));
+            Image image = imageIcon.getImage().getScaledInstance(150, -1, Image.SCALE_SMOOTH);
+            JLabel imageLabel = new JLabel(new ImageIcon(image));
+            imageLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            imageLabel.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    showFullImageDialog(imageIcon);
+                }
+            });
+            infoPanel.add(imageLabel);
         }
 
         return infoPanel;
+    }
+
+    private void showFullImageDialog(ImageIcon imageIcon) {
+        JDialog imageDialog = new JDialog(this, "Immagine ToDo", true);
+        JLabel fullImageLabel = new JLabel(imageIcon);
+        imageDialog.add(new JScrollPane(fullImageLabel));
+        imageDialog.pack();
+        imageDialog.setLocationRelativeTo(this);
+        imageDialog.setVisible(true);
     }
 
     private JLabel createUrlLabel(ToDo todo, JDialog parent) {
