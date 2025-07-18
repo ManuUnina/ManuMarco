@@ -23,40 +23,11 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Classe record per associare un nome a un colore per la JComboBox.
- * Sostituisce la classe interna per una maggiore concisione.
+ * La classe View rappresenta la finestra principale dell'interfaccia grafica (GUI) dell'applicazione.
+ * Estende {@link JFrame} e si occupa di costruire e gestire tutti i componenti visivi,
+ * come pannelli, pulsanti e liste. Interagisce con il {@link Controller} per
+ * gestire gli eventi dell'utente e aggiornare i dati visualizzati.
  */
-record NamedColor(String name, Color color) {
-    @Override
-    public String toString() {
-        return name;
-    }
-
-    public static NamedColor[] getPredefinedColors() {
-        return new NamedColor[]{
-                new NamedColor("Bianco", Color.WHITE),
-                new NamedColor("Rosso Chiaro", new Color(255, 204, 203)),
-                new NamedColor("Verde Chiaro", new Color(204, 255, 204)),
-                new NamedColor("Blu Chiaro", new Color(204, 229, 255)),
-                new NamedColor("Giallo Chiaro", new Color(255, 255, 204)),
-                new NamedColor("Arancione Chiaro", new Color(255, 229, 204)),
-                new NamedColor("Viola Chiaro", new Color(229, 204, 255))
-        };
-    }
-
-    public static NamedColor findNamedColor(Color colorToFind) {
-        if (colorToFind == null) {
-            return getPredefinedColors()[0];
-        }
-        for (NamedColor namedColor : getPredefinedColors()) {
-            if (namedColor.color().equals(colorToFind)) {
-                return namedColor;
-            }
-        }
-        return getPredefinedColors()[0];
-    }
-}
-
 public class View extends JFrame {
     private final transient Controller controller;
     private final JPanel boardSelectionContainer;
@@ -82,6 +53,11 @@ public class View extends JFrame {
     private static final String HTML_BOLD_START = "<html><b>";
     private static final String HTML_END = "</b></html>";
 
+    /**
+     * Classe interna statica per raggruppare i componenti del form di aggiunta/modifica ToDo.
+     * Questo migliora l'organizzazione e la leggibilità del codice, incapsulando tutti gli
+     * elementi di un form in un unico oggetto.
+     */
     private static class ToDoFormElements {
         JPanel panel;
         JTextField titoloField;
@@ -90,10 +66,15 @@ public class View extends JFrame {
         JTextField urlField;
         JTextField posizioneField;
         JComboBox<NamedColor> colorSelector;
-        JCheckBox completatoCheckBox; // Null for 'add' dialog
+        JCheckBox completatoCheckBox; // Può essere null per il dialogo di aggiunta
         final byte[][] immagineSelezionata = {null};
     }
 
+    /**
+     * Costruttore della View. Inizializza la finestra principale e i suoi componenti.
+     *
+     * @param controller l'istanza del {@link Controller} che gestirà la logica dell'applicazione.
+     */
     public View(Controller controller) {
         this.controller = controller;
         setTitle("Gestione ToDo - Utente: " + (controller.getUtenteCorrente() != null ? controller.getUtenteCorrente().getEmail() : "N/A"));
@@ -133,6 +114,12 @@ public class View extends JFrame {
         SwingUtilities.invokeLater(() -> mainSplitPane.setDividerLocation(1.0));
     }
 
+    /**
+     * Crea e restituisce la barra di navigazione superiore dell'applicazione.
+     * Contiene il titolo, i pulsanti per le azioni principali (Home, Profilo, etc.) e il logout.
+     *
+     * @return un {@link JPanel} che rappresenta la barra di navigazione.
+     */
     private JPanel createTopNavBar() {
         JPanel topNavBarPanel = new JPanel(new BorderLayout());
         topNavBarPanel.setBackground(new Color(230, 230, 230));
@@ -155,12 +142,10 @@ public class View extends JFrame {
         profileButton.addActionListener(_ -> showProfileDialog());
         buttonContainer.add(profileButton);
 
-        // --- NUOVO PULSANTE "CONDIVISI" ---
         JButton sharedButton = new JButton("Condivisi");
         sharedButton.setFocusPainted(false);
         sharedButton.addActionListener(_ -> showSharedToDoList());
         buttonContainer.add(sharedButton);
-        // ------------------------------------
 
         JButton allIncompleteToDosButton = new JButton("ToDo");
         allIncompleteToDosButton.setFocusPainted(false);
@@ -184,6 +169,11 @@ public class View extends JFrame {
         return topNavBarPanel;
     }
 
+    /**
+     * Crea il contenitore per la selezione delle bacheche, mostrato nella vista iniziale.
+     *
+     * @return un {@link JPanel} che contiene i pannelli delle singole bacheche.
+     */
     private JPanel createBoardSelectionContainer() {
         JPanel container = new JPanel(new GridLayout(1, 3, 20, 0));
         container.setBorder(BorderFactory.createEmptyBorder(50, 50, 50, 50));
@@ -194,6 +184,12 @@ public class View extends JFrame {
         return container;
     }
 
+    /**
+     * Crea un pannello cliccabile che rappresenta una singola bacheca.
+     *
+     * @param title il {@link Titolo} della bacheca da rappresentare.
+     * @return un {@link JPanel} per la bacheca.
+     */
     private JPanel createBoardPanel(Titolo title) {
         JPanel panel = new JPanel(new BorderLayout(10, 10));
         panel.setBorder(BorderFactory.createLineBorder(Color.GRAY, 1));
@@ -212,6 +208,12 @@ public class View extends JFrame {
         return panel;
     }
 
+    /**
+     * Crea e configura una JList per visualizzare i ToDo.
+     *
+     * @param mouseClickConsumer un'azione da eseguire quando viene fatto clic su un elemento della lista.
+     * @return una JList<ToDo> configurata.
+     */
     private JList<ToDo> createToDoJList(Consumer<MouseEvent> mouseClickConsumer) {
         todoListModel = new DefaultListModel<>();
         JList<ToDo> list = new JList<>(todoListModel);
@@ -226,6 +228,13 @@ public class View extends JFrame {
         return list;
     }
 
+    /**
+     * Processa un click del mouse su una JList di ToDo.
+     *
+     * @param list la JList su cui è avvenuto il click.
+     * @param point il punto in cui è avvenuto il click.
+     * @param action l'azione da eseguire con il ToDo selezionato.
+     */
     private void processToDoClick(JList<ToDo> list, Point point, Consumer<ToDo> action) {
         int index = list.locationToIndex(point);
         if (index != -1) {
@@ -233,10 +242,13 @@ public class View extends JFrame {
         }
     }
 
+    /**
+     * Mostra la lista dei ToDo che sono stati condivisi con l'utente corrente.
+     * Imposta la vista per visualizzare questi ToDo in un pannello dedicato.
+     */
     @SuppressWarnings("unchecked")
     private void showSharedToDoList() {
         selectedBoardTitle = null;
-        // LA RIGA SEGUENTE È STATA AGGIUNTA PER CORREGGERE IL GLITCH GRAFICO
         boardSelectionContainer.setLayout(new GridLayout(0, 1, 0, 20));
         mainSplitPane.setDividerLocation(0.35);
         todoListPanel.removeAll();
@@ -260,13 +272,17 @@ public class View extends JFrame {
         todoListPanel.repaint();
     }
 
+    /**
+     * Mostra la lista dei ToDo per la bacheca correntemente selezionata.
+     * Configura la JList per gestire i click sull'area del checkbox o sull'elemento stesso.
+     */
     @SuppressWarnings("unchecked")
     private void showToDoListForBoard() {
         boardSelectionContainer.setLayout(new GridLayout(0, 1, 0, 20));
         mainSplitPane.setDividerLocation(0.35);
 
         todoList = createToDoJList(e -> processToDoClick((JList<ToDo>) e.getSource(), e.getPoint(), todo -> {
-            if (e.getX() < 25) { // Click on checkbox area
+            if (e.getX() < 25) { // Click sull'area del checkbox
                 controller.toggleToDoStatus(selectedBoardTitle, todo, !Boolean.TRUE.equals(todo.getStato()));
             } else {
                 showToDoDetailDialog(todo);
@@ -276,6 +292,9 @@ public class View extends JFrame {
         refreshToDoList();
     }
 
+    /**
+     * Mostra una vista speciale con tutti i ToDo non completati di tutte le bacheche dell'utente.
+     */
     @SuppressWarnings("unchecked")
     private void showAllIncompleteToDos() {
         selectedBoardTitle = null;
@@ -287,6 +306,11 @@ public class View extends JFrame {
         refreshToDoList();
     }
 
+    /**
+     * Aggiorna e ricarica la visualizzazione della lista dei ToDo.
+     * Questo metodo viene chiamato ogni volta che i dati cambiano (es. aggiunta, modifica, cambio vista).
+     * Ricostruisce l'header, il corpo (lista o riquadri) e il footer del pannello dei ToDo.
+     */
     public void refreshToDoList() {
         todoListPanel.removeAll();
         todoListPanel.setLayout(new BorderLayout());
@@ -307,6 +331,12 @@ public class View extends JFrame {
         todoListPanel.repaint();
     }
 
+    /**
+     * Crea il pannello di intestazione per la vista della lista dei ToDo.
+     * Include la descrizione della bacheca e, se applicabile, il pulsante per modificarla e il checkbox per i ToDo completati.
+     *
+     * @return un {@link JPanel} che funge da header.
+     */
     private JPanel createHeaderPanel() {
         JPanel headerPanel = new JPanel(new BorderLayout());
         String descriptionText;
@@ -331,6 +361,12 @@ public class View extends JFrame {
         return headerPanel;
     }
 
+    /**
+     * Crea il pannello a piè di pagina per la vista dei ToDo.
+     * Contiene il pulsante per aggiungere un nuovo ToDo.
+     *
+     * @return un {@link JPanel} che funge da footer.
+     */
     private JPanel createFooterPanel() {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         JButton addToDoButton = new JButton(ADD_TODO_BUTTON_TEXT);
@@ -343,6 +379,10 @@ public class View extends JFrame {
         return buttonPanel;
     }
 
+    /**
+     * Popola il pannello dei ToDo con una vista a riquadri (tile view).
+     * Ogni ToDo viene mostrato come una "card" separata.
+     */
     private void populateTileView() {
         JPanel cardsContainer = new JPanel(new GridLayout(0, 2, 10, 10));
         cardsContainer.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
@@ -363,6 +403,10 @@ public class View extends JFrame {
         todoListPanel.add(new JScrollPane(cardsContainer), BorderLayout.CENTER);
     }
 
+    /**
+     * Popola il pannello dei ToDo con una vista a lista tradizionale.
+     * Utilizza il DefaultListModel per aggiungere gli elementi.
+     */
     private void populateListView() {
         if (todoListModel == null) todoListModel = new DefaultListModel<>();
         todoListModel.clear();
@@ -386,6 +430,10 @@ public class View extends JFrame {
         todoListPanel.add(new JScrollPane(todoList), BorderLayout.CENTER);
     }
 
+    /**
+     * Gestisce l'aggiunta di un ToDo quando non è selezionata una bacheca specifica.
+     * Chiede all'utente di selezionare una bacheca di destinazione.
+     */
     private void aggiungiToDoGlobale() {
         Titolo[] bachecheDisponibili = Titolo.values();
         JComboBox<Titolo> bachecaSelector = new JComboBox<>(bachecheDisponibili);
@@ -399,12 +447,21 @@ public class View extends JFrame {
         }
     }
 
+    /**
+     * Ripristina la vista iniziale mostrando la selezione delle bacheche.
+     */
     private void showBoardSelectionView() {
         selectedBoardTitle = null;
         boardSelectionContainer.setLayout(new GridLayout(1, 4, 20, 0));
         mainSplitPane.setDividerLocation(1.0);
     }
 
+    /**
+     * Crea un pannello "card" per rappresentare un singolo ToDo nella vista a riquadri.
+     *
+     * @param todo il ToDo da rappresentare.
+     * @return un {@link JPanel} che rappresenta la card del ToDo.
+     */
     private JPanel createToDoCard(ToDo todo) {
         JPanel cardPanel = new JPanel();
         cardPanel.setLayout(new BoxLayout(cardPanel, BoxLayout.Y_AXIS));
@@ -444,6 +501,11 @@ public class View extends JFrame {
         return cardPanel;
     }
 
+    /**
+     * Mostra una finestra di dialogo con i dettagli completi di un ToDo.
+     *
+     * @param todo il ToDo di cui mostrare i dettagli.
+     */
     private void showToDoDetailDialog(ToDo todo) {
         JDialog detailDialog = new JDialog(this, "Dettagli ToDo: " + todo.getTitolo(), true);
         detailDialog.setSize(500, 450);
@@ -459,6 +521,13 @@ public class View extends JFrame {
         detailDialog.setVisible(true);
     }
 
+    /**
+     * Crea il pannello informativo per la finestra di dialogo dei dettagli del ToDo.
+     *
+     * @param todo il ToDo da visualizzare.
+     * @param parentDialog il dialogo genitore.
+     * @return un {@link JPanel} con le informazioni del ToDo.
+     */
     private JPanel createToDoDetailInfoPanel(ToDo todo, JDialog parentDialog) {
         JPanel infoPanel = new JPanel(new GridLayout(0, 1, 5, 5));
         infoPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
@@ -498,6 +567,11 @@ public class View extends JFrame {
         return infoPanel;
     }
 
+    /**
+     * Mostra un'immagine a grandezza naturale in una nuova finestra di dialogo.
+     *
+     * @param imageIcon l'icona dell'immagine da visualizzare.
+     */
     private void showFullImageDialog(ImageIcon imageIcon) {
         JDialog imageDialog = new JDialog(this, "Immagine ToDo", true);
         JLabel fullImageLabel = new JLabel(imageIcon);
@@ -507,6 +581,13 @@ public class View extends JFrame {
         imageDialog.setVisible(true);
     }
 
+    /**
+     * Crea una JLabel cliccabile per un URL, che apre il link nel browser predefinito.
+     *
+     * @param todo il ToDo contenente l'URL.
+     * @param parent il dialogo genitore.
+     * @return una {@link JLabel} cliccabile.
+     */
     private JLabel createUrlLabel(ToDo todo, JDialog parent) {
         JLabel urlLabel = new JLabel("<html><b>URL:</b> <a href='" + todo.getUrl() + "'>" + todo.getUrl() + "</a></html>");
         urlLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
@@ -525,6 +606,13 @@ public class View extends JFrame {
         return urlLabel;
     }
 
+    /**
+     * Crea il pannello dei pulsanti per la finestra di dialogo dei dettagli del ToDo.
+     *
+     * @param todo il ToDo a cui si riferiscono i pulsanti.
+     * @param detailDialog il dialogo che contiene i pulsanti.
+     * @return un {@link JPanel} con i pulsanti di azione.
+     */
     private JPanel createToDoDetailButtonPanel(ToDo todo, JDialog detailDialog) {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
 
@@ -559,6 +647,12 @@ public class View extends JFrame {
         return buttonPanel;
     }
 
+    /**
+     * Gestisce l'evento di click sul pulsante "Aggiungi ToDo".
+     * Mostra un dialogo per inserire i dati del nuovo ToDo.
+     *
+     * @param unused l'evento di azione (non utilizzato).
+     */
     private void aggiungiToDo(java.awt.event.ActionEvent unused) {
         if (selectedBoardTitle == null) {
             JOptionPane.showMessageDialog(this, "Seleziona una bacheca prima di aggiungere un ToDo.", "Attenzione", JOptionPane.WARNING_MESSAGE);
@@ -593,6 +687,11 @@ public class View extends JFrame {
         }
     }
 
+    /**
+     * Crea e restituisce un oggetto ToDoFormElements per il dialogo di aggiunta di un nuovo ToDo.
+     *
+     * @return un oggetto {@link ToDoFormElements} con tutti i campi del form.
+     */
     private ToDoFormElements createAddToDoPanel() {
         ToDoFormElements form = new ToDoFormElements();
         form.panel = new JPanel(new GridLayout(0, 1));
@@ -648,6 +747,15 @@ public class View extends JFrame {
         return form;
     }
 
+    /**
+     * Esegue il parsing di una stringa di data e la converte in un oggetto LocalDate.
+     * Gestisce input vuoti e formati non validi.
+     *
+     * @param dateInput la stringa della data da parsare (formato "dd/MM/yyyy").
+     * @param defaultDate la data da usare se l'input è vuoto o non valido.
+     * @param isNew indica se il ToDo è nuovo (per personalizzare il messaggio di errore).
+     * @return un oggetto {@link LocalDate}.
+     */
     private LocalDate parseDateInput(String dateInput, LocalDate defaultDate, boolean isNew) {
         String trimmedInput = (dateInput != null) ? dateInput.trim() : "";
         if (!trimmedInput.isEmpty()) {
@@ -663,6 +771,11 @@ public class View extends JFrame {
         }
     }
 
+    /**
+     * Apre una finestra di dialogo per modificare un ToDo esistente.
+     *
+     * @param toDoDaModificare il ToDo da modificare.
+     */
     private void modificaToDo(ToDo toDoDaModificare) {
         ToDoFormElements form = createModifyToDoPanel(toDoDaModificare);
 
@@ -681,6 +794,12 @@ public class View extends JFrame {
         }
     }
 
+    /**
+     * Crea un oggetto ToDoFormElements pre-compilato con i dati di un ToDo esistente.
+     *
+     * @param toDoDaModificare il ToDo i cui dati verranno usati per riempire il form.
+     * @return un oggetto {@link ToDoFormElements} per il form di modifica.
+     */
     private ToDoFormElements createModifyToDoPanel(ToDo toDoDaModificare) {
         ToDoFormElements form = new ToDoFormElements();
         form.panel = new JPanel(new GridLayout(0, 1));
@@ -740,7 +859,11 @@ public class View extends JFrame {
         return form;
     }
 
-
+    /**
+     * Mostra un dialogo per spostare un ToDo in un'altra bacheca.
+     *
+     * @param toDoDaSpostare il ToDo da spostare.
+     */
     private void spostaToDo(ToDo toDoDaSpostare) {
         if (toDoDaSpostare == null) return;
         ArrayList<Titolo> opzioniDestinazioneList = new ArrayList<>(Arrays.asList(Titolo.values()));
@@ -762,6 +885,11 @@ public class View extends JFrame {
         }
     }
 
+    /**
+     * Chiede conferma e poi rimuove un ToDo.
+     *
+     * @param toDoDaRimuovere il ToDo da rimuovere.
+     */
     private void rimuoviToDo(ToDo toDoDaRimuovere) {
         if (toDoDaRimuovere == null) return;
         int choice = JOptionPane.showConfirmDialog(this, "Sei sicuro di voler eliminare questo ToDo?", "Conferma Eliminazione", JOptionPane.YES_NO_OPTION);
@@ -770,6 +898,11 @@ public class View extends JFrame {
         }
     }
 
+    /**
+     * Mostra un dialogo per condividere un ToDo con i contatti esistenti o con una nuova email.
+     *
+     * @param todo il ToDo da condividere.
+     */
     private void condividiToDo(ToDo todo) {
         ListaUtenti contatti = controller.getContatti();
         JPanel panel = new JPanel(new BorderLayout(10, 10));
@@ -806,6 +939,11 @@ public class View extends JFrame {
         }
     }
 
+    /**
+     * Gestisce l'evento di click sul pulsante per modificare la descrizione della bacheca.
+     *
+     * @param unused l'evento di azione (non utilizzato).
+     */
     private void modificaDescrizioneBachecaSelezionata(java.awt.event.ActionEvent unused) {
         if (selectedBoardTitle == null) return;
         Bacheca bachecaCorrente = controller.getBacheche().get(selectedBoardTitle);
@@ -817,6 +955,11 @@ public class View extends JFrame {
         }
     }
 
+    /**
+     * Gestisce l'evento di logout, chiedendo conferma all'utente.
+     *
+     * @param unused l'evento di azione (non utilizzato).
+     */
     private void performLogout(java.awt.event.ActionEvent unused) {
         int confirm = JOptionPane.showConfirmDialog(this, "Sei sicuro di voler effettuare il logout?", "Conferma Logout", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
         if (confirm == JOptionPane.YES_OPTION) {
@@ -824,15 +967,25 @@ public class View extends JFrame {
         }
     }
 
+    /**
+     * Mostra una semplice finestra di dialogo con le informazioni del profilo dell'utente.
+     */
     private void showProfileDialog() {
         String userEmail = controller.getUtenteCorrente() != null ? controller.getUtenteCorrente().getEmail() : "N/A";
         JOptionPane.showMessageDialog(this, "Email Utente: " + userEmail, "Profilo Personale", JOptionPane.INFORMATION_MESSAGE);
     }
 
+    /**
+     * Metodo chiamato dal controller per notificare che la lista contatti è stata aggiornata.
+     * Attualmente logga solo un messaggio.
+     */
     public void refreshContatti() {
         LOGGER.log(Level.INFO, "Contact list refreshed.");
     }
 
+    /**
+     * Mostra una finestra di dialogo per la gestione dei contatti (aggiunta/rimozione).
+     */
     private void showContactsDialog() {
         JDialog contactsDialog = new JDialog(this, "Gestione Contatti", true);
         contactsDialog.setSize(400, 300);
@@ -850,6 +1003,11 @@ public class View extends JFrame {
         contactsDialog.setVisible(true);
     }
 
+    /**
+     * Popola il modello della lista dei contatti con i dati attuali.
+     *
+     * @param model il {@link DefaultListModel} da popolare.
+     */
     private void populateContactsList(DefaultListModel<String> model) {
         model.removeAllElements();
         ListaUtenti contatti = controller.getContatti();
@@ -860,6 +1018,14 @@ public class View extends JFrame {
         }
     }
 
+    /**
+     * Crea il pannello dei pulsanti per la finestra di dialogo dei contatti.
+     *
+     * @param parent il dialogo genitore.
+     * @param list la lista dei contatti.
+     * @param model il modello della lista.
+     * @return un {@link JPanel} con i pulsanti Aggiungi e Rimuovi.
+     */
     private JPanel createContactsButtonPanel(JDialog parent, JList<String> list, DefaultListModel<String> model) {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
 
@@ -874,6 +1040,12 @@ public class View extends JFrame {
         return buttonPanel;
     }
 
+    /**
+     * Gestisce l'azione di aggiunta di un nuovo contatto.
+     *
+     * @param parent il dialogo genitore.
+     * @param model il modello della lista da aggiornare.
+     */
     private void addContactAction(JDialog parent, DefaultListModel<String> model) {
         String email = JOptionPane.showInputDialog(parent, "Inserisci l'email del contatto:");
         if (email != null && !email.trim().isEmpty()) {
@@ -882,6 +1054,13 @@ public class View extends JFrame {
         }
     }
 
+    /**
+     * Gestisce l'azione di rimozione di un contatto selezionato.
+     *
+     * @param parent il dialogo genitore.
+     * @param list la lista da cui ottenere la selezione.
+     * @param model il modello da cui rimuovere l'elemento.
+     */
     private void removeContactAction(JDialog parent, JList<String> list, DefaultListModel<String> model) {
         String selectedContact = list.getSelectedValue();
         if (selectedContact != null) {
@@ -895,13 +1074,31 @@ public class View extends JFrame {
         }
     }
 
+    /**
+     * Classe interna che definisce come un singolo ToDo viene renderizzato all'interno di una JList.
+     * Estende JCheckBox per mostrare lo stato di completamento in modo interattivo.
+     * Gestisce anche la colorazione dello sfondo e del testo in base al colore del ToDo e allo stato di selezione.
+     */
     public static class ToDoCellRenderer extends JCheckBox implements ListCellRenderer<ToDo> {
         private static final DateTimeFormatter cellDateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
+        /**
+         * Costruttore del renderer. Imposta il componente come opaco.
+         */
         public ToDoCellRenderer() {
             setOpaque(true);
         }
 
+        /**
+         * Configura il componente per visualizzare un ToDo.
+         *
+         * @param list la JList in cui viene disegnato il componente.
+         * @param todo l'oggetto ToDo da visualizzare.
+         * @param index l'indice della cella.
+         * @param isSelected true se la cella è selezionata.
+         * @param cellHasFocus true se la cella ha il focus.
+         * @return il Componente configurato per la visualizzazione.
+         */
         @Override
         public Component getListCellRendererComponent(JList<? extends ToDo> list, ToDo todo, int index, boolean isSelected, boolean cellHasFocus) {
             if (todo != null) {
@@ -912,7 +1109,6 @@ public class View extends JFrame {
                 Color bgColor = todo.getColore() != null ? todo.getColore() : list.getBackground();
                 setBackground(isSelected ? list.getSelectionBackground() : bgColor);
 
-                // Logica per il colore del testo semplificata
                 if (isSelected) {
                     setForeground(list.getSelectionForeground());
                 } else {
@@ -930,10 +1126,72 @@ public class View extends JFrame {
             return this;
         }
 
+        /**
+         * Determina se un colore è scuro calcolando la sua luminanza.
+         * Questo aiuta a decidere se usare testo bianco o nero per la leggibilità.
+         *
+         * @param color il Colore da analizzare.
+         * @return true se il colore è considerato scuro, false altrimenti.
+         */
         public static boolean isColorDark(Color color) {
             if (color == null) return false;
             double luminance = (0.299 * color.getRed() + 0.587 * color.getGreen() + 0.114 * color.getBlue()) / 255;
             return luminance < 0.5;
         }
+    }
+}
+
+
+/**
+ * Classe record per associare un nome leggibile a un oggetto {@link Color}.
+ * Viene utilizzata nella JComboBox per permettere all'utente di selezionare un colore per il ToDo.
+ * L'override del metodo toString() è fondamentale per la visualizzazione nella JComboBox.
+ *
+ * @param name il nome del colore da visualizzare (es. "Rosso Chiaro").
+ * @param color l'oggetto {@link Color} corrispondente.
+ */
+record NamedColor(String name, Color color) {
+    /**
+     * Restituisce il nome del colore. Questo metodo viene chiamato dalla JComboBox
+     * per visualizzare ogni elemento nella lista a discesa.
+     * @return il nome del colore.
+     */
+    @Override
+    public String toString() {
+        return name;
+    }
+
+    /**
+     * Fornisce un array di colori predefiniti disponibili per la selezione da parte dell'utente.
+     * @return un array di oggetti {@link NamedColor}.
+     */
+    public static NamedColor[] getPredefinedColors() {
+        return new NamedColor[]{
+                new NamedColor("Bianco", Color.WHITE),
+                new NamedColor("Rosso Chiaro", new Color(255, 204, 203)),
+                new NamedColor("Verde Chiaro", new Color(204, 255, 204)),
+                new NamedColor("Blu Chiaro", new Color(204, 229, 255)),
+                new NamedColor("Giallo Chiaro", new Color(255, 255, 204)),
+                new NamedColor("Arancione Chiaro", new Color(255, 229, 204)),
+                new NamedColor("Viola Chiaro", new Color(229, 204, 255))
+        };
+    }
+
+    /**
+     * Trova un oggetto NamedColor corrispondente a un dato oggetto Color.
+     * Se il colore non viene trovato, restituisce un valore predefinito (Bianco).
+     * @param colorToFind il Colore da cercare.
+     * @return l'oggetto {@link NamedColor} corrispondente, o il primo della lista se non trovato.
+     */
+    public static NamedColor findNamedColor(Color colorToFind) {
+        if (colorToFind == null) {
+            return getPredefinedColors()[0];
+        }
+        for (NamedColor namedColor : getPredefinedColors()) {
+            if (namedColor.color().equals(colorToFind)) {
+                return namedColor;
+            }
+        }
+        return getPredefinedColors()[0];
     }
 }

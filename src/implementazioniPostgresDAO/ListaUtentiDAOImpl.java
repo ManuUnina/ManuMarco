@@ -12,10 +12,26 @@ import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/**
+ * Implementazione dell'interfaccia {@link ListaUtentiDAO} per il database PostgreSQL.
+ * Fornisce metodi concreti per interagire con la tabella dei contatti e la tabella
+ * di associazione 'todo_utenti_condivisi' per gestire la condivisione dei ToDo
+ * e le liste di contatti degli utenti.
+ */
 public class ListaUtentiDAOImpl implements ListaUtentiDAO {
 
+    /**
+     * Logger per la registrazione di errori e informazioni.
+     */
     private static final Logger LOGGER = Logger.getLogger(ListaUtentiDAOImpl.class.getName());
 
+    /**
+     * Aggiunge un utente alla lista di condivisione di un ToDo specifico nel database.
+     * Utilizza una clausola "ON CONFLICT DO NOTHING" per evitare errori in caso di inserimenti duplicati.
+     *
+     * @param todoId L'ID del ToDo a cui associare l'utente.
+     * @param email L'email dell'utente da aggiungere alla lista di condivisione.
+     */
     @Override
     public void addUserToSharedList(int todoId, String email) {
         String sql = "INSERT INTO todo_utenti_condivisi (todo_id, utente_email) VALUES (?, ?) ON CONFLICT DO NOTHING";
@@ -29,6 +45,13 @@ public class ListaUtentiDAOImpl implements ListaUtentiDAO {
         }
     }
 
+    /**
+     * Recupera dal database la lista degli utenti con cui un ToDo è condiviso.
+     *
+     * @param todoId L'ID del ToDo di cui recuperare la lista di condivisione.
+     * @param autoreEmail L'email dell'autore del ToDo, usata per costruire l'oggetto {@link ListaUtenti}.
+     * @return Un oggetto {@link ListaUtenti} contenente l'autore e la lista delle email degli utenti condivisi.
+     */
     @Override
     public ListaUtenti getSharedUsersForToDo(int todoId, String autoreEmail) {
         ArrayList<String> sharedUsers = new ArrayList<>();
@@ -46,6 +69,13 @@ public class ListaUtentiDAOImpl implements ListaUtentiDAO {
         return new ListaUtenti(autoreEmail, sharedUsers);
     }
 
+    /**
+     * Recupera dal database la lista dei contatti di un utente specifico.
+     *
+     * @param utenteEmail L'email dell'utente di cui si vogliono recuperare i contatti.
+     * @return Un oggetto {@link ListaUtenti} che funge da contenitore per la lista dei contatti.
+     * L'autore in questo contesto è l'utente stesso.
+     */
     @Override
     public ListaUtenti getContattiForUser(String utenteEmail) {
         ArrayList<String> contatti = new ArrayList<>();
@@ -63,6 +93,13 @@ public class ListaUtentiDAOImpl implements ListaUtentiDAO {
         return new ListaUtenti(utenteEmail, contatti);
     }
 
+    /**
+     * Aggiunge un nuovo contatto alla lista di un utente nel database.
+     * La clausola "ON CONFLICT DO NOTHING" previene l'inserimento di contatti duplicati.
+     *
+     * @param utenteEmail L'email dell'utente a cui aggiungere il contatto.
+     * @param contattoEmail L'email del contatto da aggiungere.
+     */
     @Override
     public void aggiungiContatto(String utenteEmail, String contattoEmail) {
         String sql = "INSERT INTO contatto (utente_email, contatto_email) VALUES (?, ?) ON CONFLICT DO NOTHING";
@@ -76,6 +113,12 @@ public class ListaUtentiDAOImpl implements ListaUtentiDAO {
         }
     }
 
+    /**
+     * Rimuove un contatto dalla lista di un utente nel database.
+     *
+     * @param utenteEmail L'email dell'utente dalla cui lista si vuole rimuovere il contatto.
+     * @param contattoEmail L'email del contatto da rimuovere.
+     */
     @Override
     public void rimuoviContatto(String utenteEmail, String contattoEmail) {
         String sql = "DELETE FROM contatto WHERE utente_email = ? AND contatto_email = ?";

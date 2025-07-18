@@ -14,14 +14,28 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/**
+ * Implementazione dell'interfaccia {@link BachecaDAO} per il database PostgreSQL.
+ * Questa classe gestisce le operazioni di accesso ai dati per gli oggetti {@link Bacheca},
+ * consentendo di recuperare, salvare e aggiornare le bacheche nel database.
+ */
 public class BachecaDAOImpl implements BachecaDAO {
 
+    /**
+     * Logger per la registrazione di errori e informazioni.
+     */
     private static final Logger LOGGER = Logger.getLogger(BachecaDAOImpl.class.getName());
 
+    /**
+     * {@inheritDoc}
+     * Recupera tutte le bacheche di un utente specifico dal database.
+     *
+     * @param utenteEmail L'email dell'utente di cui recuperare le bacheche.
+     * @return una {@link Map} con i {@link Titolo} come chiave e gli oggetti {@link Bacheca} come valore.
+     */
     @Override
     public Map<Titolo, Bacheca> findAllForUser(String utenteEmail) {
         Map<Titolo, Bacheca> bacheche = new EnumMap<>(Titolo.class);
-        // La query ora seleziona solo le colonne necessarie
         String sql = "SELECT titolo, descrizione FROM bacheca WHERE utente_email = ?";
 
         try (Connection conn = ConnectionFactory.getConnection();
@@ -33,18 +47,20 @@ public class BachecaDAOImpl implements BachecaDAO {
             while (rs.next()) {
                 Titolo titolo = Titolo.valueOf(rs.getString("titolo"));
                 String descrizione = rs.getString("descrizione");
-                // L'utenteEmail viene passato come parametro, quindi non è necessario selezionarlo
                 Bacheca bacheca = new Bacheca(titolo, descrizione, utenteEmail);
                 bacheche.put(titolo, bacheca);
             }
 
         } catch (SQLException e) {
-            // Sostituito e.printStackTrace() con un logger
             LOGGER.log(Level.SEVERE, "Errore durante la ricerca delle bacheche per l'utente: " + utenteEmail, e);
         }
         return bacheche;
     }
 
+    /**
+     * {@inheritDoc}
+     * Salva una nuova bacheca nel database.
+     */
     @Override
     public void save(Bacheca bacheca) {
         String sql = "INSERT INTO bacheca (titolo, descrizione, utente_email) VALUES (?, ?, ?)";
@@ -61,6 +77,10 @@ public class BachecaDAOImpl implements BachecaDAO {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     * Aggiorna la descrizione di una bacheca esistente.
+     */
     @Override
     public void updateDescrizione(Titolo titolo, String descrizione, String utenteEmail) {
         String sql = "UPDATE bacheca SET descrizione = ? WHERE titolo = ? AND utente_email = ?";
