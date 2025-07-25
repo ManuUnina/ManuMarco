@@ -29,28 +29,50 @@ import java.util.logging.Logger;
  * gestire gli eventi dell'utente e aggiornare i dati visualizzati.
  */
 public class View extends JFrame {
+    /** Controller dell'applicazione per la gestione della logica di business. */
     private final transient Controller controller;
+    /** Pannello contenitore per la selezione delle bacheche. */
     private final JPanel boardSelectionContainer;
+    /** Pannello principale dove viene visualizzata la lista dei ToDo o i riquadri. */
     private final JPanel todoListPanel;
+    /** Pannello divisore che separa la selezione bacheche dalla lista ToDo. */
     private final JSplitPane mainSplitPane;
+    /** Checkbox per filtrare la visualizzazione dei ToDo completati. */
     private final JCheckBox showCompletedCheckBox;
+    /** Modello dati per la JList dei ToDo. */
     private DefaultListModel<ToDo> todoListModel;
+    /** Lista visuale per i ToDo. */
     private JList<ToDo> todoList;
+    /** Etichetta che mostra la descrizione della bacheca correntemente selezionata. */
     private JLabel currentBoardDescriptionLabel;
+    /** Titolo della bacheca attualmente selezionata. */
     private Titolo selectedBoardTitle;
+    /** Formattatore per le date nel formato "dd/MM/yyyy". */
     private static final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    /** Array di colori predefiniti tra cui l'utente può scegliere. */
     private final transient NamedColor[] predefinedColors = NamedColor.getPredefinedColors();
+    /** Flag per indicare se la vista corrente è a riquadri (true) o a lista (false). */
     private boolean isTileView = false;
+    /** Pulsante per alternare tra la vista a lista e la vista a riquadri. */
     private final JToggleButton viewToggleButton;
 
+    /** Logger per la registrazione di eventi e errori della View. */
     private static final Logger LOGGER = Logger.getLogger(View.class.getName());
+    /** Titolo standard per le finestre di dialogo di errore. */
     private static final String ERROR_TITLE = "Errore";
+    /** Titolo per la finestra di dialogo di modifica della descrizione della bacheca. */
     private static final String MODIFY_BOARD_DESC_TITLE = "Modifica Descrizione Bacheca";
+    /** Testo per il pulsante di aggiunta di un nuovo ToDo. */
     private static final String ADD_TODO_BUTTON_TEXT = "<html><span style='font-size:1.2em;'>&#43;</span> Aggiungi ToDo</html>";
+    /** Testo per il checkbox che mostra i ToDo completati. */
     private static final String SHOW_COMPLETED_CHECKBOX_TEXT = "Mostra ToDo Completati";
+    /** Testo per il pulsante di modifica della descrizione della bacheca. */
     private static final String MODIFY_DESCRIPTION_BUTTON_TEXT = "Modifica Descrizione";
+    /** Nome del font utilizzato in alcuni componenti. */
     private static final String FONT_NAME = "Arial";
+    /** Tag di apertura HTML per il grassetto. */
     private static final String HTML_BOLD_START = "<html><b>";
+    /** Tag di chiusura HTML. */
     private static final String HTML_END = "</b></html>";
 
     /**
@@ -458,6 +480,7 @@ public class View extends JFrame {
 
     /**
      * Crea un pannello "card" per rappresentare un singolo ToDo nella vista a riquadri.
+     * La card viene colorata di rosso chiaro se il ToDo è scaduto e non completato.
      *
      * @param todo il ToDo da rappresentare.
      * @return un {@link JPanel} che rappresenta la card del ToDo.
@@ -469,7 +492,13 @@ public class View extends JFrame {
                 BorderFactory.createLineBorder(Color.LIGHT_GRAY, 1),
                 BorderFactory.createEmptyBorder(10, 10, 10, 10)));
         cardPanel.setPreferredSize(new Dimension(180, 120));
-        cardPanel.setBackground(todo.getColore() != null ? todo.getColore() : Color.WHITE);
+
+        // Controlla se il ToDo è scaduto e non completato
+        if (todo.getScadenza() != null && todo.getScadenza().isBefore(LocalDate.now()) && !Boolean.TRUE.equals(todo.getStato())) {
+            cardPanel.setBackground(new Color(255, 182, 193)); // Rosso chiaro per evidenziare
+        } else {
+            cardPanel.setBackground(todo.getColore() != null ? todo.getColore() : Color.WHITE);
+        }
 
         JLabel titleLabel = new JLabel(HTML_BOLD_START + todo.getTitolo() + HTML_END);
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -479,7 +508,7 @@ public class View extends JFrame {
         descLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         descLabel.setFont(new Font(FONT_NAME, Font.PLAIN, 12));
 
-        Color bgColor = todo.getColore();
+        Color bgColor = cardPanel.getBackground(); // Usa il colore di sfondo già impostato
         if (ToDoCellRenderer.isColorDark(bgColor)) {
             titleLabel.setForeground(Color.WHITE);
             descLabel.setForeground(Color.WHITE);
@@ -749,18 +778,23 @@ public class View extends JFrame {
 
     /**
      * Esegue il parsing di una stringa di data e la converte in un oggetto LocalDate.
-     * Gestisce input vuoti e formati non validi.
+     * Gestisce input vuoti, formati non validi e impedisce l'inserimento della data odierna.
      *
      * @param dateInput la stringa della data da parsare (formato "dd/MM/yyyy").
      * @param defaultDate la data da usare se l'input è vuoto o non valido.
      * @param isNew indica se il ToDo è nuovo (per personalizzare il messaggio di errore).
-     * @return un oggetto {@link LocalDate}.
+     * @return un oggetto {@link LocalDate} valido o la data di default.
      */
     private LocalDate parseDateInput(String dateInput, LocalDate defaultDate, boolean isNew) {
         String trimmedInput = (dateInput != null) ? dateInput.trim() : "";
         if (!trimmedInput.isEmpty()) {
             try {
-                return LocalDate.parse(trimmedInput, dateFormatter);
+                LocalDate parsedDate = LocalDate.parse(trimmedInput, dateFormatter);
+                if (parsedDate.isEqual(LocalDate.now())) {
+                    JOptionPane.showMessageDialog(this, "Non è possibile inserire la data di oggi come scadenza.", "Data non valida", JOptionPane.ERROR_MESSAGE);
+                    return defaultDate; // Ritorna la data di default o gestisci come preferisci
+                }
+                return parsedDate;
             } catch (DateTimeParseException _) {
                 String message = "Formato data non valido. Usare gg/mm/aaaa.\n" + (isNew ? "Verrà usata una data predefinita." : "La data di scadenza non sarà modificata.");
                 JOptionPane.showMessageDialog(this, message, "Errore Data", JOptionPane.ERROR_MESSAGE);
@@ -1077,7 +1111,8 @@ public class View extends JFrame {
     /**
      * Classe interna che definisce come un singolo ToDo viene renderizzato all'interno di una JList.
      * Estende JCheckBox per mostrare lo stato di completamento in modo interattivo.
-     * Gestisce anche la colorazione dello sfondo e del testo in base al colore del ToDo e allo stato di selezione.
+     * Gestisce la colorazione dello sfondo in base al colore del ToDo, allo stato di selezione
+     * e allo stato di scadenza (evidenzia in rosso i ToDo scaduti e non completati).
      */
     public static class ToDoCellRenderer extends JCheckBox implements ListCellRenderer<ToDo> {
         private static final DateTimeFormatter cellDateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
@@ -1106,7 +1141,14 @@ public class View extends JFrame {
                 String scadenzaStr = (todo.getScadenza() != null) ? todo.getScadenza().format(cellDateFormatter) : "N/D";
                 setText(String.format("%s (Scad: %s) - %s", todo.getTitolo(), scadenzaStr, todo.getDescrizione()));
 
-                Color bgColor = todo.getColore() != null ? todo.getColore() : list.getBackground();
+                Color bgColor;
+                // Controlla se il ToDo è scaduto e non completato
+                if (todo.getScadenza() != null && todo.getScadenza().isBefore(LocalDate.now()) && !Boolean.TRUE.equals(todo.getStato())) {
+                    bgColor = new Color(255, 182, 193); // Rosso chiaro per evidenziare
+                } else {
+                    bgColor = todo.getColore() != null ? todo.getColore() : list.getBackground();
+                }
+
                 setBackground(isSelected ? list.getSelectionBackground() : bgColor);
 
                 if (isSelected) {
