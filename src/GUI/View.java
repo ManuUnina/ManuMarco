@@ -778,7 +778,7 @@ public class View extends JFrame {
 
     /**
      * Esegue il parsing di una stringa di data e la converte in un oggetto LocalDate.
-     * Gestisce input vuoti, formati non validi e impedisce l'inserimento della data odierna.
+     * Gestisce input vuoti, formati non validi e impedisce l'inserimento di date passate.
      *
      * @param dateInput la stringa della data da parsare (formato "dd/MM/yyyy").
      * @param defaultDate la data da usare se l'input è vuoto o non valido.
@@ -790,8 +790,8 @@ public class View extends JFrame {
         if (!trimmedInput.isEmpty()) {
             try {
                 LocalDate parsedDate = LocalDate.parse(trimmedInput, dateFormatter);
-                if (parsedDate.isEqual(LocalDate.now())) {
-                    JOptionPane.showMessageDialog(this, "Non è possibile inserire la data di oggi come scadenza.", "Data non valida", JOptionPane.ERROR_MESSAGE);
+                if (parsedDate.isBefore(LocalDate.now())) {
+                    JOptionPane.showMessageDialog(this, "Non è possibile inserire date antecedenti all'odierna come scadenza.", "Data non valida", JOptionPane.ERROR_MESSAGE);
                     return defaultDate; // Ritorna la data di default o gestisci come preferisci
                 }
                 return parsedDate;
